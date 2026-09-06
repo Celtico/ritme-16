@@ -227,6 +227,20 @@ describe("les regles de gènere se senten al resultat", () => {
     }
   });
 
+  it("percussió: hi ha una veu líder amb el doble de cops que la mediana", () => {
+    // catorze de vint llavors no en tenien cap abans d'aquesta regla
+    for (let seed = 1; seed <= 20; seed++) {
+      const p = generate(styleById("percussio")!, seed).song.slots[0].pattern;
+      const cops = p.tracks
+        .filter((t) => t.steps.slice(0, p.length).some(Boolean))
+        .map((t) => t.steps.slice(0, p.length).filter(Boolean).length)
+        .sort((a, b) => b - a);
+      if (cops.length < 3) continue;
+      const mediana = cops[Math.floor(cops.length / 2)];
+      expect(cops[0], `llavor ${seed}`).toBeGreaterThanOrEqual(mediana * 2);
+    }
+  });
+
   it("techno: decay curt i saturació alta al bombo", () => {
     for (let seed = 1; seed <= 20; seed++) {
       const p = generate(styleById("techno")!, seed).song.slots[0].pattern;

@@ -364,6 +364,25 @@ export const STYLES: StyleSpec[] = [
           if (a.steps[i] && c.steps[i] && chance(rng, 0.8)) c.steps[i] = 0;
         }
       },
+      // És l'estil amb més veus (5,65) i totes pesaven gairebé igual: la més
+      // carregada en feia 5,55 i la mitjana per veu 3,15, una relació d'1,76.
+      // Amb sis veus del mateix pes no hi ha figura, hi ha textura. La més
+      // densa passa a ser la líder i se li dobla el pes de la mediana.
+      (p) => {
+        const amb = p.tracks.filter((t) =>
+          t.steps.slice(0, p.length).some(Boolean),
+        );
+        if (amb.length < 3) return;
+        const cops = (t: (typeof amb)[number]) =>
+          t.steps.slice(0, p.length).filter(Boolean).length;
+        const ordenades = [...amb].sort((x, y) => cops(y) - cops(x));
+        const lider = ordenades[0];
+        const mediana = cops(ordenades[Math.floor(ordenades.length / 2)]);
+        // s'afegeixen cops a la líder als passos que li queden lliures
+        for (let i = 0; i < p.length && cops(lider) < mediana * 2; i++) {
+          if (!lider.steps[i]) lider.steps[i] = 1;
+        }
+      },
     ],
     sound: {
       timbal: (r) => ({ pitch: Math.round(-4 + r() * 8) }),
