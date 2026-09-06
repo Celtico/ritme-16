@@ -14,9 +14,11 @@ percussió sintetitzades en temps real amb Tone.js, sense cap sample. Next.js 15
 | `npm run build` | abans de tancar una tasca que toqui rutes, fonts o layout |
 | `npm run typecheck` | després de qualsevol canvi a `.ts`/`.tsx` |
 | `npm run lint` | ídem; `next build` també hi falla, o sigui que val més passar-hi abans |
-| `npm test` | tests de `src/lib` (encara no existeix: cal afegir Vitest) |
+| `npm test` | tests de `src/lib` amb Vitest; ha de passar abans de tancar res |
 
-Abans de donar una tasca per acabada, `typecheck` i `lint` han de passar nets.
+Abans de donar una tasca per acabada, `typecheck`, `lint` i `test` han de passar nets.
+No facis `npm run build` amb el servidor de `dev` engegat: es trepitgen el `.next` i
+el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 ## Decisions que no es canvien
 
@@ -45,12 +47,15 @@ Abans de donar una tasca per acabada, `typecheck` i `lint` han de passar nets.
   presentació: rep valors i callbacks.
 - `src/components/TrackLane.tsx` — una fila: nom, M/S, volum i els passos.
 - `src/components/StepButton.tsx` — una cel·la i el mapa `FACE` d'aparença per valor.
+- `src/components/VoicePanel.tsx` — els quatre comandaments de so d'una veu. Només
+  presentació: rep `VoiceParams` i retorna canvis.
 - `src/components/PatternBank.tsx` — presets, sortejar, buidar i el desat al navegador.
 - `src/hooks/useSequencer.ts` — tot l'estat del patró i tot Tone: transport, seqüència,
   edicions. Cap component no ha de tocar Tone pel seu compte.
 - `src/lib/pattern.ts` — el model pur: tipus, `VOICES`, `PRESETS`. Sense React ni Tone.
-- `src/lib/kit.ts` — les vuit cadenes de síntesi. Rep el mòdul Tone per paràmetre; no
-  se l'importa ell mateix.
+- `src/lib/kit.ts` — les vuit cadenes de síntesi, `LEVELS` (la barreja) i `setParams`,
+  que aplica els comandaments en directe. Rep el mòdul Tone per paràmetre; no se
+  l'importa ell mateix. Res d'aquí no ha de recrear nodes per un canvi de paràmetre.
 - `src/lib/storage.ts` — `localStorage` i la validació del que en surt. Sense React.
 
 ## Com treballar
@@ -64,13 +69,14 @@ Abans de donar una tasca per acabada, `typecheck` i `lint` han de passar nets.
 
 ## Sospitós / pendent
 
-- Provat al navegador (Chrome, dev server): sonen les vuit veus, el playhead va,
-  clic / majúscules+clic / clic dret, mute, solo, volum, swing, desar i carregar, i les
-  tecles espai i 1-8. El `MetalSynth` de l'aro i el cencerro queda descartat com a
-  sospita: la signatura de Tone 15 és `triggerAttackRelease(note, duration, time?,
-  velocity?)` i les crides ja hi encaixaven; el problema real era de nivells i és a
-  `LEVELS` de `kit.ts`.
-- Per mesurar el so sense sentir-lo: pengeu un `AnalyserNode` de la destinació
-  sobreescrivint `AudioNode.prototype.connect` abans del primer gest, i mireu el pic.
-  És l'única manera que tenim de verificar àudio des d'aquí.
+- Verificat al navegador amb un `AnalyserNode` penjat de la destinació (cal sobreescriure
+  `AudioNode.prototype.connect` abans del primer gest): els quatre comandaments mouen el
+  senyal de debò — afinació ×2 a +12 semitons, caiguda 430→220 ms, saturació baixa el
+  factor de cresta de 3,6 a 2,1, i el to puja el centre espectral d'11 a 17 kHz.
+- Els presets sonen igual que abans de la Fase 1: bombo, aro, timbal i cencerro donen el
+  mateix dBFS al decimal. Les veus de soroll varien fins a 2,8 dB entre dispars idèntics,
+  o sigui que allà la mesura no distingeix; s'ha comprovat que la desviació observada és
+  menor que aquesta dispersió.
+- Compte en mesurar: hi ha uns 125 ms de latència entre el dispar i el senyal a
+  l'analitzador. Si mesures abans, sembla que no soni res.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

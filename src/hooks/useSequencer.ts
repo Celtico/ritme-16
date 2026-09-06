@@ -11,6 +11,7 @@ import {
   type Cell,
   type Pattern,
   type VoiceId,
+  type VoiceParams,
 } from "@/lib/pattern";
 
 type ToneModule = typeof import("tone");
@@ -20,6 +21,14 @@ type StepSequence = import("tone").Sequence<number>;
 
 const ACCENT_VELOCITY = 1;
 const NORMAL_VELOCITY = 0.6;
+
+/** Aboca al kit tot el que el patró diu de cada veu: volum i comandaments. */
+function applyMix(kit: DrumKit, p: Pattern) {
+  for (const v of VOICES) {
+    kit.setVolume(v.id, p.mix[v.id].volume);
+    kit.setParams(v.id, p.sound[v.id]);
+  }
+}
 
 export function useSequencer() {
   const [pattern, setPattern] = useState<Pattern>(() =>
@@ -47,8 +56,7 @@ export function useSequencer() {
     await Tone.start();
     if (!kitRef.current) {
       kitRef.current = createKit(Tone);
-      const mix = patternRef.current.mix;
-      for (const v of VOICES) kitRef.current.setVolume(v.id, mix[v.id].volume);
+      applyMix(kitRef.current, patternRef.current);
     }
     setAudioReady(true);
     return { Tone, kit: kitRef.current };
@@ -162,6 +170,21 @@ export function useSequencer() {
     [],
   );
 
+  const setSound = useCallback(
+    (voice: VoiceId, changes: Partial<VoiceParams>) => {
+      // el kit ha de sentir el canvi ara, no al proper render; com a
+      // setChannel, l'efecte va fora de l'actualitzador d'estat
+      const next = { ...patternRef.current.sound[voice], ...changes };
+      kitRef.current?.setParams(voice, next);
+      setPattern((prev) => {
+        const p = clonePattern(prev);
+        p.sound[voice] = next;
+        return p;
+      });
+    },
+    [],
+  );
+
   const setBpm = useCallback((bpm: number) => {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
   }, []);
@@ -173,7 +196,7 @@ export function useSequencer() {
   const loadPattern = useCallback((p: Pattern) => {
     const next = clonePattern(p);
     setPattern(next);
-    for (const v of VOICES) kitRef.current?.setVolume(v.id, next.mix[v.id].volume);
+    if (kitRef.current) applyMix(kitRef.current, next);
   }, []);
 
   const clearAll = useCallback(() => {
@@ -233,6 +256,7 @@ export function useSequencer() {
     toggleStep,
     clearLane,
     setChannel,
+    setSound,
     setBpm,
     setSwing,
     loadPattern,

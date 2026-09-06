@@ -32,6 +32,49 @@ export const VOICES: VoiceMeta[] = [
 /** 0 = silenci, 1 = normal, 2 = accent */
 export type Cell = 0 | 1 | 2;
 
+/**
+ * Els quatre comandaments de so de cada veu. Els valors per defecte
+ * reprodueixen exactament el so de fàbrica: `tone` 0,5 és el centre del
+ * recorregut i `drive` 0 deixa la saturació completament fora.
+ */
+export interface VoiceParams {
+  /** Semitons, -12..+12. A les veus de soroll mou el filtre en comptes del to. */
+  pitch: number;
+  /** Caiguda de l'envolupant, en segons. */
+  decay: number;
+  /** 0..1 de fosc a brillant; 0,5 és el filtre tal com ve de fàbrica. */
+  tone: number;
+  /** 0..1 de net a saturat. */
+  drive: number;
+}
+
+/** Marge del control de caiguda. El mínim baixa fins a 0,02 s perquè el
+ * charles (0,045) i l'aro (0,035) ja hi són per sota i no han de canviar. */
+export const DECAY_MIN = 0.02;
+export const DECAY_MAX = 1.5;
+
+/** La caiguda de fàbrica de cada veu, tal com estava escrita a kit.ts. */
+const FACTORY_DECAY: Record<VoiceId, number> = {
+  bombo: 0.42,
+  caixa: 0.17,
+  palmada: 0.11,
+  charles: 0.045,
+  charlesObert: 0.38,
+  aro: 0.035,
+  timbal: 0.34,
+  cencerro: 0.3,
+};
+
+export function defaultParams(id: VoiceId): VoiceParams {
+  return { pitch: 0, decay: FACTORY_DECAY[id], tone: 0.5, drive: 0 };
+}
+
+export function defaultSound(): Record<VoiceId, VoiceParams> {
+  return Object.fromEntries(
+    VOICES.map((v) => [v.id, defaultParams(v.id)]),
+  ) as Record<VoiceId, VoiceParams>;
+}
+
 export interface ChannelMix {
   volume: number; // dB, de -40 a +6
   muted: boolean;
@@ -45,6 +88,7 @@ export interface Pattern {
   swing: number;
   steps: Record<VoiceId, Cell[]>;
   mix: Record<VoiceId, ChannelMix>;
+  sound: Record<VoiceId, VoiceParams>;
 }
 
 function emptyLane(): Cell[] {
@@ -65,7 +109,14 @@ export function defaultMix(): Record<VoiceId, ChannelMix> {
 }
 
 export function emptyPattern(name = "Sense títol"): Pattern {
-  return { name, bpm: 104, swing: 0, steps: emptySteps(), mix: defaultMix() };
+  return {
+    name,
+    bpm: 104,
+    swing: 0,
+    steps: emptySteps(),
+    mix: defaultMix(),
+    sound: defaultSound(),
+  };
 }
 
 export function clonePattern(p: Pattern): Pattern {
@@ -79,6 +130,9 @@ export function clonePattern(p: Pattern): Pattern {
     mix: Object.fromEntries(
       Object.entries(p.mix).map(([k, v]) => [k, { ...v }]),
     ) as Record<VoiceId, ChannelMix>,
+    sound: Object.fromEntries(
+      Object.entries(p.sound).map(([k, v]) => [k, { ...v }]),
+    ) as Record<VoiceId, VoiceParams>,
   };
 }
 

@@ -12,7 +12,9 @@ interface Props {
   onToggleStep: (index: number, accent: boolean) => void;
   onChangeMix: (changes: Partial<ChannelMix>) => void;
   onAudition: () => void;
+  onOpenSound: () => void;
   onClear: () => void;
+  soundOpen: boolean;
 }
 
 function MiniToggle({
@@ -55,7 +57,9 @@ export function TrackLane({
   onToggleStep,
   onChangeMix,
   onAudition,
+  onOpenSound,
   onClear,
+  soundOpen,
 }: Props) {
   const groups = [0, 1, 2, 3];
 
@@ -66,13 +70,29 @@ export function TrackLane({
         dimmed ? "opacity-45" : "",
       ].join(" ")}
     >
-      <div className="sticky left-0 z-10 flex w-[186px] shrink-0 items-center gap-2 bg-panel pr-2">
+      <div className="sticky left-0 z-10 flex w-[222px] shrink-0 items-center gap-2 bg-panel pr-2">
         <button
           type="button"
           onClick={onAudition}
+          aria-label={`Escoltar ${voice.name} (tecla ${voice.key})`}
+          title={`Escoltar ${voice.name} (tecla ${voice.key})`}
+          className="h-6 w-5 shrink-0 rounded-[3px] border border-ink/25 bg-panel-hi text-[9px] leading-none text-ink transition-colors hover:bg-white"
+        >
+          ▶
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenSound}
           onDoubleClick={onClear}
-          title={`Escoltar ${voice.name} (tecla ${voice.key}) · doble clic per buidar la fila`}
-          className="w-[92px] truncate rounded-[3px] border border-ink/25 bg-panel-hi px-2 py-1.5 text-left text-[13px] text-ink transition-colors hover:bg-white"
+          aria-expanded={soundOpen}
+          title={`So de ${voice.name} · doble clic per buidar la fila`}
+          className={[
+            "w-[92px] truncate rounded-[3px] border px-2 py-1.5 text-left text-[13px] text-ink transition-colors",
+            soundOpen
+              ? "border-ink/45 bg-white"
+              : "border-ink/25 bg-panel-hi hover:bg-white",
+          ].join(" ")}
         >
           {voice.name}
         </button>

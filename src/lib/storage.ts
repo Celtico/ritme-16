@@ -1,4 +1,10 @@
-import { clonePattern, emptyPattern, type Pattern, VOICES } from "./pattern";
+import {
+  clonePattern,
+  defaultParams,
+  emptyPattern,
+  type Pattern,
+  VOICES,
+} from "./pattern";
 
 const KEY = "ritme16.patterns.v1";
 
@@ -38,8 +44,12 @@ export function loadSaved(): SavedPattern[] {
   }
 }
 
-/** Completa qualsevol veu que faltés en un patró desat amb una versió antiga. */
-function normalise(p: Pattern): Pattern {
+/**
+ * Completa qualsevol veu que faltés en un patró desat amb una versió antiga.
+ * Els patrons anteriors al kit editable no porten `sound`: se'ls hi posen els
+ * valors de fàbrica, que sonen com sonaven.
+ */
+export function normalise(p: Pattern): Pattern {
   const base = emptyPattern(p.name);
   const merged = clonePattern(base);
   merged.bpm = p.bpm;
@@ -47,6 +57,9 @@ function normalise(p: Pattern): Pattern {
   for (const v of VOICES) {
     if (p.steps[v.id]) merged.steps[v.id] = [...p.steps[v.id]];
     if (p.mix[v.id]) merged.mix[v.id] = { ...p.mix[v.id] };
+    merged.sound[v.id] = p.sound?.[v.id]
+      ? { ...defaultParams(v.id), ...p.sound[v.id] }
+      : defaultParams(v.id);
   }
   return merged;
 }

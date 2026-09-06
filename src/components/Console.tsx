@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PatternBank } from "./PatternBank";
 import { TrackLane } from "./TrackLane";
 import { Transport } from "./Transport";
+import { VoicePanel } from "./VoicePanel";
 import { useSequencer } from "@/hooks/useSequencer";
-import { VOICES } from "@/lib/pattern";
+import { VOICES, type VoiceId } from "@/lib/pattern";
 
 function StepRuler({ currentStep }: { currentStep: number }) {
   return (
     <div className="flex items-end gap-3 pb-1" aria-hidden>
-      <div className="w-[186px] shrink-0" />
+      <div className="w-[222px] shrink-0" />
       <div className="flex gap-3">
         {[0, 1, 2, 3].map((g) => (
           <div key={g} className="flex gap-1">
@@ -42,7 +43,9 @@ function StepRuler({ currentStep }: { currentStep: number }) {
 
 export function Console() {
   const seq = useSequencer();
+  const [soundVoice, setSoundVoice] = useState<VoiceId | null>(null);
   const anySolo = VOICES.some((v) => seq.pattern.mix[v.id].solo);
+  const openVoice = VOICES.find((v) => v.id === soundVoice);
   const { toggleTransport, audition } = seq;
 
   useEffect(() => {
@@ -114,11 +117,24 @@ export function Console() {
                 }
                 onChangeMix={(changes) => seq.setChannel(voice.id, changes)}
                 onAudition={() => void seq.audition(voice.id)}
+                onOpenSound={() =>
+                  setSoundVoice((v) => (v === voice.id ? null : voice.id))
+                }
                 onClear={() => seq.clearLane(voice.id)}
+                soundOpen={soundVoice === voice.id}
               />
             ))}
           </div>
         </div>
+
+        {openVoice ? (
+          <VoicePanel
+            voice={openVoice}
+            params={seq.pattern.sound[openVoice.id]}
+            onChange={(changes) => seq.setSound(openVoice.id, changes)}
+            onClose={() => setSoundVoice(null)}
+          />
+        ) : null}
 
         <PatternBank
           pattern={seq.pattern}
@@ -131,9 +147,9 @@ export function Console() {
       <div className="mx-auto mt-5 max-w-2xl text-[13px] leading-relaxed text-panel-lo">
         <p>
           Clica un pas per activar-lo i torna-hi amb la tecla de majúscules per
-          accentuar-lo. La barra espaiadora arrenca i atura; les tecles 1 a 8
-          fan sonar cada veu solta; doble clic al nom d&apos;una veu buida la
-          seva fila.
+          accentuar-lo. La barra espaiadora arrenca i atura; les tecles 1 a 8 i
+          el botó ▶ fan sonar cada veu solta; el nom de la veu obre els seus
+          comandaments de so, i el doble clic hi buida la fila.
         </p>
       </div>
     </div>
