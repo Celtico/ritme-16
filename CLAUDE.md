@@ -64,10 +64,13 @@ Abans de donar una tasca per acabada, `typecheck` i `lint` han de passar nets.
 
 ## Sospitós / pendent
 
-- `MetalSynth.triggerAttackRelease` a `src/lib/kit.ts` (aro, cencerro): **resolt pel que
-  fa a la signatura**. A Tone 15.1.22 `MetalSynth` estén `Monophonic`, o sigui que hereta
-  `triggerAttackRelease(note, duration, time?, velocity?)`; les crides amb la freqüència
-  al davant (`420`, `560`) són correctes i `tsc` no s'hi queixa. El que **no** està
-  comprovat és com sonen.
-- `typecheck` i `build` passen nets, però res no s'ha executat mai al navegador: ni el
-  so, ni el playhead, ni el desat a `localStorage`.
+- Provat al navegador (Chrome, dev server): sonen les vuit veus, el playhead va,
+  clic / majúscules+clic / clic dret, mute, solo, volum, swing, desar i carregar, i les
+  tecles espai i 1-8. El `MetalSynth` de l'aro i el cencerro queda descartat com a
+  sospita: la signatura de Tone 15 és `triggerAttackRelease(note, duration, time?,
+  velocity?)` i les crides ja hi encaixaven; el problema real era de nivells i és a
+  `LEVELS` de `kit.ts`.
+- Per mesurar el so sense sentir-lo: pengeu un `AnalyserNode` de la destinació
+  sobreescrivint `AudioNode.prototype.connect` abans del primer gest, i mireu el pic.
+  És l'única manera que tenim de verificar àudio des d'aquí.
+- Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.
