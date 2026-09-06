@@ -27,7 +27,7 @@ function MuteToggle({
       className={[
         "h-6 w-6 shrink-0 rounded-[3px] border border-ink/40 text-[11px] font-semibold leading-none transition-colors",
         muted
-          ? "bg-oxblood text-panel-hi"
+          ? "bg-oxblood text-on-accent"
           : "bg-panel-lo/60 text-ink/55 hover:bg-panel-lo/90",
       ].join(" ")}
     >

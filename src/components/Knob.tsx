@@ -129,7 +129,7 @@ export function Knob({
   return (
     <div className="relative flex flex-col items-center">
       {arrossegant ? (
-        <div className="pointer-events-none absolute -top-6 z-20 whitespace-nowrap rounded-[3px] border border-ink/40 bg-ink px-1.5 py-0.5 font-display text-[11px] text-panel-hi tabular-nums">
+        <div className="pointer-events-none absolute -top-6 z-20 whitespace-nowrap rounded-[3px] border border-ink/40 bg-header px-1.5 py-0.5 font-display text-[11px] text-on-accent tabular-nums">
           {inici.current.anell
             ? `${Math.round((ring ?? 0) * 100)} %`
             : mostrat}

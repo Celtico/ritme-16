@@ -13,22 +13,44 @@ description: Com es dibuixen les interfícies d'àudio del RITME-16 — l'espai 
 
 ## El que no es negocia
 
-La paleta i les tipografies del RITME-16 no canvien mai per assemblar-se a cap
-referència. Res de fons blau fosc, res d'anells blau cel, res del color del
-Pigments. Del que copiem és **la disposició i el comportament**, no l'aspecte.
+RITME-16 té dos temes, dia i nit, definits a globals.css amb les mateixes variables.
+Cap component sap en quin tema és: fa servir les variables i prou. Els dos temes són
+la mateixa màquina amb la llum apagada: xassís càlid (grafit-marró de nit, os de dia),
+mai blau-negre, mai el color de cap referència.
+
+De les referències copiem la disposició i el comportament, no l'aspecte.
 
 | Ús | Variable |
 | --- | --- |
 | Xassís | `--color-panel`, `--color-panel-hi`, `--color-panel-lo` |
+| Per damunt del xassís (el que abans era "blanc") | `--color-raise` |
+| Franja del transport i globus, **fosca als dos temes** | `--color-header` |
+| Text sobre un color saturat, **clar als dos temes** | `--color-on-accent` |
 | Text | `--color-ink`, `--color-ink-soft` |
 | Envolupants, pas actiu | `--color-oxblood` |
 | LFO, accent, playhead | `--color-ochre` |
 | Aleatori, pistes melòdiques, accions | `--color-teal` |
+| Colors de pista | els vuit de `TRACK_COLORS` a `lib/voices.ts` |
+| Relleu | `--shadow-inset`, `--shadow-raised`, `--shadow-accent`, `--shadow-key`, `--shadow-pop` |
 | Títols i xifres | `--font-display` (Bricolage) |
 | Tota la resta | `--font-sans` (Instrument) |
 
-Les xifres grans van sempre amb `tabular-nums`: si ballen en canviar, el
-control sembla espatllat.
+**Cap component no escriu un color ni una ombra a mà.** Hi ha dos temes, dia i
+nit, i el que canvia és el valor de la variable, mai el seu nom. Un `rgba()`
+amb xifres dins d'un component vol dir que aquell tros no canviarà de tema.
+
+**El relleu es fa diferent a cada tema.** De dia ve d'una ombra projectada
+fosca; de nit, d'una línia clara a dalt, perquè sobre un xassís fosc una ombra
+fosca no es veu. Per això els tokens d'ombra es redefineixen sencers a cada
+tema en comptes de compartir una recepta.
+
+**Compte amb els rols que s'inverteixen.** `--color-ink` és fosc de dia i clar
+de nit: fer-lo servir com a *fons* d'una superfície fosca funciona de dia i
+falla de nit. Per això la franja del transport té `--color-header`.
+
+Les xifres grans van sempre amb tabular-nums.
+El commutador de tema viu al Transport (icona sol/lluna), persisteix a localStorage i
+respecta prefers-color-scheme la primera vegada.
 
 ---
 

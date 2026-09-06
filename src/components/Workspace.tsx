@@ -19,6 +19,7 @@ import {
 } from "./layout";
 import { useMeters } from "@/hooks/useMeters";
 import { useSequencer } from "@/hooks/useSequencer";
+import { useTheme } from "@/hooks/useTheme";
 import { isAudible, MAX_TRACKS } from "@/lib/pattern";
 
 /** Divisor arrossegable. `axis` diu si mou amplada o alçada. */
@@ -71,6 +72,7 @@ function Divider({
 
 export function Workspace() {
   const seq = useSequencer();
+  const [theme, setTheme] = useTheme();
   const [soundTrack, setSoundTrack] = useState<string | null>(null);
   // només un menú de pista obert alhora
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -138,6 +140,8 @@ export function Workspace() {
       style={{ gridTemplateRows: "52px 1fr auto", gridTemplateColumns: "1fr" }}
     >
       <Transport
+        theme={theme}
+        onTheme={setTheme}
         isPlaying={seq.isPlaying}
         bpm={seq.pattern.bpm}
         swing={seq.pattern.swing}

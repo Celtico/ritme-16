@@ -11,9 +11,9 @@ interface Props {
 }
 
 const FACE: Record<Cell, string> = {
-  0: "bg-panel-lo/70 shadow-[inset_0_2px_3px_rgba(29,27,23,0.35)]",
-  1: "bg-oxblood shadow-[0_1px_0_rgba(239,233,219,0.35),0_2px_4px_rgba(0,0,0,0.4)]",
-  2: "bg-ochre shadow-[0_1px_0_rgba(239,233,219,0.5),0_2px_6px_rgba(201,138,43,0.5)]",
+  0: "bg-panel-lo/70 shadow-[var(--shadow-inset)]",
+  1: "bg-oxblood shadow-[var(--shadow-raised)]",
+  2: "bg-ochre shadow-[var(--shadow-accent)]",
 };
 
 export function StepButton({

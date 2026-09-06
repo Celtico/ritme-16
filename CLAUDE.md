@@ -47,6 +47,12 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   llavors React avisa que l'HTML no coincideix. Ha passat, i el rètol d'error del mode
   `dev` és fàcil de confondre amb un clic fet abans d'hidratar.
 - No tocar la paleta ni les tipografies si no ho demanen.
+- **Cap color ni cap ombra escrits a mà en un component.** Hi ha tema dia i tema nit; el
+  que canvia és el valor de la variable, no el nom. Un `rgba()` amb xifres vol dir que
+  aquell tros es quedarà encallat en un tema.
+- `--color-ink` és fosc de dia i clar de nit: no el facis servir com a *fons* d'una
+  superfície fosca. Per a això hi ha `--color-header`, i `--color-on-accent` per al text
+  que va damunt d'un color saturat.
 - L'app ocupa el viewport sencer i **no es desplaça mai la pàgina**: el desplaçament és
   sempre d'una regió. Si afegeixes res a l'arrel, comprova-ho a 2560, 1440 i 1024 px.
 
@@ -54,8 +60,15 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 - `src/app/layout.tsx` — `lang="ca"`, fonts i metadades. Cap lògica d'interfície.
 - `src/app/page.tsx` — només munta `<Workspace/>`. Res de client aquí.
-- `src/app/globals.css` — el `@theme` de Tailwind v4 (paleta, tipografies) i els
-  controls lliscants. No hi van utilitats noves ni estils de components.
+- `src/app/globals.css` — els dos temes. El `@theme` (que és `static`, si no Tailwind
+  poda les variables que cap classe no fa servir) només apunta a variables; els valors
+  viuen a `:root` (dia), `:root[data-theme="night"]` i el bloc de `prefers-color-scheme`.
+  També hi ha els tokens d'ombra i els controls lliscants. No hi van utilitats noves.
+- `src/lib/theme.ts` — la clau del `localStorage` i el tipus. **Mòdul pla a posta**:
+  `layout.tsx` és de servidor i, si això visqués al hook (`"use client"`), el valor hi
+  arribaria com a `undefined`.
+- `src/hooks/useTheme.ts` — llegeix i canvia el tema. Qui el fixa abans del primer
+  pintat és un script en línia de `layout.tsx`.
 - `src/components/Workspace.tsx` — l'arrel: una graella de `h-dvh w-screen` amb transport
   (52 px), centre i panell inferior, els divisors arrossegables, la sincronia de
   desplaçament entre panells i les tecles globals (espai, 1–8). Cap crida a Tone.
@@ -109,36 +122,23 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 ## Sospitós / pendent
 
-- Enviaments, retorns, panoràmic i vúmetres verificats al navegador: la cua del bombo
-  passa de 380 a 680 ms amb l'enviament A obert; el retard dona repics decreixents a
-  intervals regulars; el panoràmic separa els canals net (tot a la dreta dona L=0 i
-  R=0,37); i els vúmetres segueixen el patró i cauen entre cops.
-- El panell de so també està verificat: tancar el tall de 20 kHz a 20 Hz baixa el bombo
-  12,3 dB, `Velocitat → afinació` al 100 % li puja el fonamental de 35 a 64 Hz, i el
-  gràfic ADSR mou l'atac, la caiguda i el sosteniment.
-- Canviar el `decay` del retorn A regenera la resposta impulsional del `Reverb`, i això
-  és **asíncron**: la reverberació calla un instant mentre es refà. És com funciona el
-  node, no un error.
-- **No s'ha provat** el camí de `prefers-reduced-motion` dels vúmetres (hauria de fer una
-  sola lectura i no animar), ni una modulació d'LFO sonant, ni `Env Amp → tall`, ni la
-  modulació de la saturació.
-- L'LFO està sincronitzat al transport: amb el transport aturat el seu valor no es mou.
-- Els presets sonen igual: bombo, aro, timbal i cencerro donen el mateix dBFS al decimal.
-  Les veus de soroll varien molt entre dispars idèntics (la palmada, fins a 4,3 dB), o
-  sigui que allà la mesura no distingeix.
-- Per mesurar el so: pengeu un `AnalyserNode` de la destinació sobreescrivint
-  `AudioNode.prototype.connect` abans del primer gest (per als canals, un
-  `ChannelSplitter`). Hi ha uns 125 ms de latència, i si es simulen esdeveniments de
-  punter cal deixar-hi una pausa entremig: els oients s'enganxen en un efecte i el primer
-  moviment es perd.
-- Gestió de pistes verificada al navegador: duplicar posa la còpia just a sota amb id nou,
-  moure amunt i avall va, reanomenar amb teclat real també, el color canvia la ratlla de
-  la fila, i eliminar demana confirmació només si la pista té passos.
-- Compte provant la interfície des de la consola: els esdeveniments sintètics de React
-  (un `Event('input')` seguit d'un `blur()`) sovint no confirmen un camp de text. Val més
-  escriure-hi de debò amb el teclat.
+- Els dos temes estan provats al navegador: sense tria desada mana `prefers-color-scheme`,
+  el commutador desa la tria a `localStorage`, i en recarregar la tria guanya el sistema.
+  Cap avís d'hidratació.
+- El relleu s'ha revisat en fosc: els passos buits porten una línia clara a baix i el
+  botó de play un bisell a dalt, perquè l'ombra negra sola no es veia.
+- **Sense provar**: el parpelleig real en obrir amb la xarxa lenta (l'script en línia
+  hauria d'evitar-lo, però només s'ha comprovat que el tema ja és correcte al primer
+  render), el tema de nit a Safari i Firefox, i el `themeColor` de la barra del mòbil.
+- L'app ocupa el viewport sencer i no es desplaça mai la pàgina. Verificat a 2560, 1440 i
+  1024 px; **els 390 px no s'han pogut provar** perquè Chrome no fa la finestra tan
+  estreta.
+- Els vúmetres, els enviaments, el panoràmic i els retorns estan verificats per mesura;
+  el camí de `prefers-reduced-motion` dels vúmetres, no.
+- Modulacions: `velocitat` i `atzar` cap a qualsevol destinació i els LFO cap al tall
+  estan verificats; una modulació d'LFO sonant i `Env Amp → tall`, no.
 - El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
-  `Tone.getDraw()` ja programades que arriben després de l'`stop()`. Ve d'abans.
+  `Tone.getDraw()` ja programades que arriben després de l'`stop()`.
 - Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
   escenes i les pistes melòdiques (baix i acords).
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

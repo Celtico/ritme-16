@@ -232,7 +232,7 @@ export function SoundPanel({ track, tracks, macros, onChange, onMacro }: Props) 
           <button
             type="button"
             onClick={() => onChange(factory)}
-            className="rounded-[3px] border border-ink/30 bg-panel-hi px-2 py-1 text-[12px] text-ink transition-colors hover:bg-white"
+            className="rounded-[3px] border border-ink/30 bg-panel-hi px-2 py-1 text-[12px] text-ink transition-colors hover:bg-raise"
           >
             De fàbrica
           </button>

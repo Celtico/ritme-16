@@ -44,7 +44,7 @@ function Opcio({
       className={[
         "w-full rounded-[2px] px-2 py-1 text-left text-[12px] transition-colors disabled:cursor-default disabled:opacity-40",
         perillosa
-          ? "text-oxblood hover:bg-oxblood hover:text-panel-hi"
+          ? "text-oxblood hover:bg-oxblood hover:text-on-accent"
           : "text-ink hover:bg-panel-lo/70",
       ].join(" ")}
     >
@@ -145,7 +145,7 @@ export function TrackMenu({
         aria-expanded={obert}
         title={`Opcions de ${track.name}`}
         onClick={() => setObert(!obert)}
-        className="h-6 w-5 rounded-[3px] border border-ink/25 bg-panel-hi text-[11px] leading-none text-ink-soft transition-colors hover:bg-white"
+        className="h-6 w-5 rounded-[3px] border border-ink/25 bg-panel-hi text-[11px] leading-none text-ink-soft transition-colors hover:bg-raise"
       >
         ⋯
       </button>
@@ -155,7 +155,7 @@ export function TrackMenu({
             <div
               ref={caixa}
               style={{ left: pos.left, top: pos.top, width: AMPLADA }}
-              className="fixed z-[100] rounded-[3px] border border-ink/40 bg-panel-hi p-1 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.5)]"
+              className="fixed z-[100] rounded-[3px] border border-ink/40 bg-panel-hi p-1 shadow-[var(--shadow-pop)]"
             >
           {reanomenant ? (
             <input
@@ -225,7 +225,7 @@ export function TrackMenu({
                 <button
                   type="button"
                   onClick={onRemove}
-                  className="rounded-[2px] bg-oxblood px-2 py-0.5 text-[11px] text-panel-hi"
+                  className="rounded-[2px] bg-oxblood px-2 py-0.5 text-[11px] text-on-accent"
                 >
                   Elimina
                 </button>

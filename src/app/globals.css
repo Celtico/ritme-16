@@ -1,35 +1,172 @@
 @import "tailwindcss";
-@theme {
+
+/*
+ * Els rols de color no canvien mai de nom; el que canvia amb el tema és el
+ * seu valor. Per això el @theme no porta cap xifra: només apunta a variables
+ * que cada tema redefineix. Res del programa no ha de saber quin tema hi ha.
+ */
+/* `static` perquè Tailwind no podi les variables que cap classe no fa
+   servir: els colors de pista s'apliquen des d'un style en temps d'execució
+   i el compilador no els pot veure. */
+@theme static {
   --color-desk: var(--desk);
   --color-desk-deep: var(--desk-deep);
   --color-panel: var(--panel);
   --color-panel-hi: var(--panel-hi);
   --color-panel-lo: var(--panel-lo);
+  /* el to per damunt de panel-hi: el que abans era "blanc" */
+  --color-raise: var(--raise);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  /* La franja del transport i els globus: una superfície fosca en tots dos
+     temes. Abans manllevava --ink, i en tema nit s'invertia i sortia clara. */
+  --color-header: var(--header);
+  /* El text que va damunt d'un color saturat: clar sempre. */
+  --color-on-accent: var(--on-accent);
+
+  /* Els vuit colors de pista. Els tres primers són també els de senyal. */
   --color-oxblood: var(--oxblood);
+  --color-rust: var(--rust);
   --color-ochre: var(--ochre);
+  --color-olive: var(--olive);
   --color-teal: var(--teal);
+  --color-slate: var(--slate);
+  --color-plum: var(--plum);
+  --color-coffee: var(--coffee);
+
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * DIA. El relleu es fa com al maquinari real: una línia clara a dalt i una
+ * ombra projectada a sota.
+ */
 :root {
-  --desk: #343a30; --desk-deep: #232821;
-  --panel: #ddd4c0; --panel-hi: #efe9db; --panel-lo: #c3b89e;
-  --ink: #1d1b17; --ink-soft: #6d6656;
-  --oxblood: #8e2f2a; --ochre: #c98a2b; --teal: #23615e;
+  --desk: #343a30;
+  --desk-deep: #232821;
+  --panel: #ddd4c0;
+  --panel-hi: #efe9db;
+  --panel-lo: #c3b89e;
+  --raise: #ffffff;
+  --ink: #1d1b17;
+  --ink-soft: #6d6656;
+  --header: #1d1b17;
+  --on-accent: #efe9db;
+
+  --oxblood: #8e2f2a;
+  --rust: #a85a2b;
+  --ochre: #c98a2b;
+  --olive: #6d7334;
+  --teal: #23615e;
+  --slate: #40566b;
+  --plum: #6b3a55;
+  --coffee: #5c4433;
+
   --shadow: 29 27 23;
+  --bevel: 255 255 255;
+
+  --shadow-inset: inset 0 2px 3px rgb(var(--shadow) / 0.35);
+  --shadow-raised:
+    0 1px 0 rgb(var(--bevel) / 0.35), 0 2px 4px rgb(var(--shadow) / 0.4);
+  --shadow-accent:
+    0 1px 0 rgb(var(--bevel) / 0.5), 0 2px 6px rgb(var(--shadow) / 0.35);
+  --shadow-key: 0 3px 0 rgb(var(--shadow) / 0.45);
+  --shadow-key-on: 0 2px 0 rgb(var(--shadow) / 0.5);
+  --shadow-pop: 0 8px 20px -6px rgb(var(--shadow) / 0.5);
+  --shadow-thumb: 0 1px 2px rgb(var(--shadow) / 0.35);
+
   color-scheme: light;
 }
 
+/*
+ * NIT. Sobre un xassís fosc, una ombra fosca no es veu: el relleu passa a
+ * venir sobretot de la línia clara de dalt, que puja d'opacitat, mentre que
+ * l'ombra projectada es fa negra i més ampla per separar la peça del fons.
+ */
 :root[data-theme="night"] {
-  --desk: #141412; --desk-deep: #0c0c0b;
-  --panel: #2a2825; --panel-hi: #36332e; --panel-lo: #1e1d1a;
-  --ink: #e8e2d4; --ink-soft: #9a9384;
-  --oxblood: #b8463f; --ochre: #d9a03f; --teal: #3f9490;
+  --desk: #4a5142;
+  --desk-deep: #0c0c0b;
+  --panel: #24231f;
+  --panel-hi: #302e29;
+  --panel-lo: #191816;
+  --raise: #423f38;
+  --ink: #e8e2d4;
+  --ink-soft: #9a9384;
+  --header: #14130f;
+  --on-accent: #f2ece0;
+
+  --oxblood: #b8463f;
+  --rust: #c47140;
+  --ochre: #d9a03f;
+  --olive: #8b9247;
+  --teal: #3f9490;
+  --slate: #5f7893;
+  --plum: #91567a;
+  --coffee: #83644a;
+
   --shadow: 0 0 0;
+  --bevel: 255 250 235;
+
+  --shadow-inset:
+    inset 0 2px 4px rgb(var(--shadow) / 0.6),
+    inset 0 -1px 0 rgb(var(--bevel) / 0.07);
+  --shadow-raised:
+    inset 0 1px 0 rgb(var(--bevel) / 0.25), 0 2px 5px rgb(var(--shadow) / 0.6);
+  --shadow-accent:
+    inset 0 1px 0 rgb(var(--bevel) / 0.34), 0 2px 9px rgb(var(--shadow) / 0.55);
+  --shadow-key:
+    inset 0 1px 0 rgb(var(--bevel) / 0.2), 0 3px 0 rgb(var(--shadow) / 0.65);
+  --shadow-key-on:
+    inset 0 1px 0 rgb(var(--bevel) / 0.25), 0 2px 0 rgb(var(--shadow) / 0.75);
+  --shadow-pop: 0 10px 28px -6px rgb(var(--shadow) / 0.75);
+  --shadow-thumb: 0 1px 2px rgb(var(--shadow) / 0.6);
+
   color-scheme: dark;
+}
+
+/* Sense tria explícita, mana el sistema. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="day"]) {
+    --desk: #4a5142;
+    --desk-deep: #0c0c0b;
+    --panel: #24231f;
+    --panel-hi: #302e29;
+    --panel-lo: #191816;
+    --raise: #423f38;
+    --ink: #e8e2d4;
+    --ink-soft: #9a9384;
+    --header: #14130f;
+    --on-accent: #f2ece0;
+
+    --oxblood: #b8463f;
+    --rust: #c47140;
+    --ochre: #d9a03f;
+    --olive: #8b9247;
+    --teal: #3f9490;
+    --slate: #5f7893;
+    --plum: #91567a;
+    --coffee: #83644a;
+
+    --shadow: 0 0 0;
+    --bevel: 255 250 235;
+
+    --shadow-inset:
+      inset 0 2px 4px rgb(var(--shadow) / 0.6),
+      inset 0 -1px 0 rgb(var(--bevel) / 0.07);
+    --shadow-raised:
+      inset 0 1px 0 rgb(var(--bevel) / 0.25), 0 2px 5px rgb(var(--shadow) / 0.6);
+    --shadow-accent:
+      inset 0 1px 0 rgb(var(--bevel) / 0.34), 0 2px 9px rgb(var(--shadow) / 0.55);
+    --shadow-key:
+      inset 0 1px 0 rgb(var(--bevel) / 0.2), 0 3px 0 rgb(var(--shadow) / 0.65);
+    --shadow-key-on:
+      inset 0 1px 0 rgb(var(--bevel) / 0.25), 0 2px 0 rgb(var(--shadow) / 0.75);
+    --shadow-pop: 0 10px 28px -6px rgb(var(--shadow) / 0.75);
+    --shadow-thumb: 0 1px 2px rgb(var(--shadow) / 0.6);
+
+    color-scheme: dark;
+  }
 }
 
 html,
@@ -83,11 +220,11 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 2px;
   background: linear-gradient(
     180deg,
-    var(--color-panel-hi),
+    var(--color-raise),
     var(--color-panel-lo)
   );
   border: 1px solid color-mix(in srgb, var(--color-ink) 55%, transparent);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-thumb);
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -96,7 +233,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 2px;
   background: linear-gradient(
     180deg,
-    var(--color-panel-hi),
+    var(--color-raise),
     var(--color-panel-lo)
   );
   border: 1px solid color-mix(in srgb, var(--color-ink) 55%, transparent);

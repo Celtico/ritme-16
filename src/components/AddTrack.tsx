@@ -38,7 +38,7 @@ export function AddTrack({ onAdd, remaining }: Props) {
         disabled={remaining <= 0}
         aria-expanded={obert}
         onClick={() => setObert((v) => !v)}
-        className="rounded-[3px] border border-ink/30 bg-panel-hi px-3 py-1 text-[13px] text-ink transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40"
+        className="rounded-[3px] border border-ink/30 bg-panel-hi px-3 py-1 text-[13px] text-ink transition-colors hover:bg-raise disabled:cursor-default disabled:opacity-40"
       >
         + Pista
       </button>
@@ -49,7 +49,7 @@ export function AddTrack({ onAdd, remaining }: Props) {
       </span>
 
       {obert ? (
-        <div className="absolute left-0 top-9 z-40 w-52 rounded-[3px] border border-ink/40 bg-panel-hi p-1 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.5)]">
+        <div className="absolute left-0 top-9 z-40 w-52 rounded-[3px] border border-ink/40 bg-panel-hi p-1 shadow-[var(--shadow-pop)]">
           {VOICE_KINDS.map((kind) => (
             <button
               key={kind}

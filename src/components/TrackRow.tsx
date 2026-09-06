@@ -90,7 +90,7 @@ export function TrackRow({
         onClick={onAudition}
         aria-label={escoltar}
         title={escoltar}
-        className="h-6 w-5 shrink-0 rounded-[3px] border border-ink/25 bg-panel-hi text-[9px] leading-none text-ink transition-colors hover:bg-white"
+        className="h-6 w-5 shrink-0 rounded-[3px] border border-ink/25 bg-panel-hi text-[9px] leading-none text-ink transition-colors hover:bg-raise"
       >
         ▶
       </button>
@@ -104,8 +104,8 @@ export function TrackRow({
         className={[
           "min-w-0 flex-1 truncate rounded-[3px] border px-2 py-1 text-left text-[13px] text-ink transition-colors",
           soundOpen
-            ? "border-ink/45 bg-white"
-            : "border-ink/25 bg-panel-hi hover:bg-white",
+            ? "border-ink/45 bg-raise"
+            : "border-ink/25 bg-panel-hi hover:bg-raise",
         ].join(" ")}
       >
         {name}
@@ -117,14 +117,14 @@ export function TrackRow({
         active={mix.muted}
         label="M"
         title="Silenciar"
-        activeClass="bg-oxblood text-panel-hi"
+        activeClass="bg-oxblood text-on-accent"
         onClick={() => onChangeMix({ muted: !mix.muted })}
       />
       <MiniToggle
         active={mix.solo}
         label="S"
         title="Sonar en solitari"
-        activeClass="bg-teal text-panel-hi"
+        activeClass="bg-teal text-on-accent"
         onClick={() => onChangeMix({ solo: !mix.solo })}
       />
 

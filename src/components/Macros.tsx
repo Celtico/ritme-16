@@ -112,7 +112,7 @@ export function Macros({ macros, tracks, current, onChange }: Props) {
             </button>
 
             {obert === i ? (
-              <div className="absolute z-30 mt-[132px] w-44 rounded-[3px] border border-ink/40 bg-panel-hi p-2 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.5)]">
+              <div className="absolute z-30 mt-[132px] w-44 rounded-[3px] border border-ink/40 bg-panel-hi p-2 shadow-[var(--shadow-pop)]">
                 <p className="mb-1 text-[11px] text-ink-soft">
                   A {current.name}:
                 </p>
@@ -129,7 +129,7 @@ export function Macros({ macros, tracks, current, onChange }: Props) {
                         className={[
                           "flex-1 rounded-[2px] border px-1 py-0.5 text-left text-[11px]",
                           a
-                            ? "border-ink/45 bg-teal text-panel-hi"
+                            ? "border-ink/45 bg-teal text-on-accent"
                             : "border-ink/25 bg-panel-lo/40 text-ink-soft",
                         ].join(" ")}
                       >

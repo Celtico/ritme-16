@@ -27,8 +27,8 @@ function PanelButton({
       className={[
         "rounded-[3px] border border-ink/30 px-3 py-1.5 text-[13px] transition-colors",
         tone === "warm"
-          ? "bg-teal text-panel-hi hover:bg-teal/85"
-          : "bg-panel-hi text-ink hover:bg-white",
+          ? "bg-teal text-on-accent hover:bg-teal/85"
+          : "bg-panel-hi text-ink hover:bg-raise",
       ].join(" ")}
     >
       {children}
@@ -115,7 +115,7 @@ export function PatternBank({
                 type="button"
                 onClick={() => remove(s.id)}
                 aria-label={`Esborrar ${s.pattern.name}`}
-                className="rounded-r-[3px] border border-l-0 border-ink/30 bg-panel-lo/50 px-2 text-[13px] text-ink-soft hover:bg-oxblood hover:text-panel-hi"
+                className="rounded-r-[3px] border border-l-0 border-ink/30 bg-panel-lo/50 px-2 text-[13px] text-ink-soft hover:bg-oxblood hover:text-on-accent"
               >
                 ×
               </button>
