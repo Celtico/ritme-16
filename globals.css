@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  /* La superfície on recolza la màquina */
+  --color-desk: #343a30;
+  --color-desk-deep: #232821;
+
+  /* El xassís */
+  --color-panel: #ddd4c0;
+  --color-panel-hi: #efe9db;
+  --color-panel-lo: #c3b89e;
+  --color-ink: #1d1b17;
+  --color-ink-soft: #6d6656;
+
+  /* Senyals */
+  --color-oxblood: #8e2f2a;
+  --color-ochre: #c98a2b;
+  --color-teal: #23615e;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(
+      120% 90% at 50% -10%,
+      color-mix(in srgb, var(--color-desk) 88%, white) 0%,
+      var(--color-desk) 45%,
+      var(--color-desk-deep) 100%
+    )
+    fixed;
+  color: var(--color-panel);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus visible i coherent sobre qualsevol fons */
+:focus-visible {
+  outline: 2px solid var(--color-ochre);
+  outline-offset: 2px;
+}
+
+/* Els controls lliscants han de semblar controls de maquinari */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-ink) 35%, var(--color-panel-lo));
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-ink) 35%, var(--color-panel-lo));
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    var(--color-panel-hi),
+    var(--color-panel-lo)
+  );
+  border: 1px solid color-mix(in srgb, var(--color-ink) 55%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    var(--color-panel-hi),
+    var(--color-panel-lo)
+  );
+  border: 1px solid color-mix(in srgb, var(--color-ink) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
