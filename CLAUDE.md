@@ -155,6 +155,41 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   digues-ho al final del resum en lloc de donar-ho per bo.
 - No afegeixis dependències sense justificar-les en una línia del commit.
 
+## Com es comporten les variacions i el break
+
+Mesurat sobre 20 llavors per estil (365 variacions en total). "Distància" són
+cel·les de percussió que difereixen de la base.
+
+| Estil | dist. mitjana | dins de 2–5 | cel·les base → variació → break |
+| --- | --- | --- | --- |
+| house | 2,7 | 39/57 | 11,1 → 12,4 → 5,2 |
+| breakbeat | 3,9 | 37/59 | 18,1 → 16,5 → 7,8 |
+| trip-hop | 2,8 | 28/41 | 16,1 → 16,0 → 9,0 |
+| techno | 3,6 | 47/61 | 13,7 → 12,4 → 7,2 |
+| dub | 3,4 | 24/37 | 21,9 → 21,7 → 10,0 |
+| ternari | 3,3 | 32/40 | 28,4 → 28,4 → 10,3 |
+| percussió | 4,2 | 53/70 | 16,9 → 17,0 → 6,8 |
+
+**El break va bé a tot arreu**: 140 de 140 casos queden més buits que la base,
+i de mitjana a la meitat o menys.
+
+**Les variacions no.** Només 260 de 365 (71 %) cauen dins de la forquilla de
+2–5 cel·les demanada. Els dos extrems fallen per motius diferents:
+
+- **Massa poc (distància 1).** Passa a tots els estils. Ve de la xarxa de
+  seguretat de `buildVariation`, que quan el sorteig no canvia res força tres
+  commutacions de cel·la; si en cauen dues sobre passos ja actius, la
+  distància neta queda en 1.
+- **Massa (fins a 14 al breakbeat, 12 al trip-hop i al techno).** Treure una
+  veu sencera compta totes les seves cel·les. Al breakbeat el charles en fa
+  vuit, i treure'l dona una distància de 8 d'un sol cop.
+
+O sigui que la forquilla de 2–5 i la manera de fer variacions són
+incompatibles tal com estan: **una variació que treu una veu no hi pot cabre
+mai**. O es mesura la distància en veus i no en cel·les, o la forquilla ha de
+ser més ampla per a les que treuen una veu. No s'ha canviat res: només
+mesurat.
+
 ## Sospitós / pendent
 
 - El generador està provat amb 200 llavors per estil: 1.400 cançons vàlides, totes
