@@ -17,22 +17,24 @@ const unics = (p: Pattern) => new Set(ids(p)).size === p.tracks.length;
 
 describe("afegir pistes", () => {
   it("la posa al final, del tipus demanat", () => {
-    const p = addTrack(emptyPattern(), "caixa");
-    expect(p.tracks).toHaveLength(9);
-    expect(p.tracks[8].kind).toBe("caixa");
-    expect(p.tracks[8].name).toBe("Caixa");
+    const base = emptyPattern();
+    const p = addTrack(base, "caixa");
+    expect(p.tracks).toHaveLength(base.tracks.length + 1);
+    const nova = p.tracks[p.tracks.length - 1];
+    expect(nova.kind).toBe("caixa");
+    expect(nova.name).toBe("Caixa");
   });
 
   it("dona un id nou quan el tipus ja hi és", () => {
     const p = addTrack(emptyPattern(), "bombo");
-    expect(p.tracks[8].id).not.toBe("bombo");
+    expect(p.tracks[p.tracks.length - 1].id).not.toBe("bombo");
     expect(unics(p)).toBe(true);
   });
 
   it("manté els ids únics afegint-ne moltes del mateix tipus", () => {
     let p = emptyPattern();
     for (let i = 0; i < 8; i++) p = addTrack(p, "bombo");
-    expect(p.tracks).toHaveLength(16);
+    expect(p.tracks).toHaveLength(MAX_TRACKS);
     expect(unics(p)).toBe(true);
   });
 
@@ -44,8 +46,9 @@ describe("afegir pistes", () => {
 
   it("no toca el patró original", () => {
     const p = emptyPattern();
+    const abans = p.tracks.length;
     addTrack(p, "caixa");
-    expect(p.tracks).toHaveLength(8);
+    expect(p.tracks).toHaveLength(abans);
   });
 });
 
@@ -81,17 +84,10 @@ describe("duplicar pistes", () => {
 
 describe("eliminar pistes", () => {
   it("la treu i deixa la resta en ordre", () => {
-    const p = removeTrack(emptyPattern(), "palmada");
-    expect(p.tracks).toHaveLength(7);
-    expect(ids(p)).toEqual([
-      "bombo",
-      "caixa",
-      "charles",
-      "charlesObert",
-      "aro",
-      "timbal",
-      "cencerro",
-    ]);
+    const base = emptyPattern();
+    const p = removeTrack(base, "palmada");
+    expect(p.tracks).toHaveLength(base.tracks.length - 1);
+    expect(ids(p)).toEqual(ids(base).filter((id) => id !== "palmada"));
   });
 
   it("neteja les assignacions de macro que hi apuntaven", () => {
@@ -128,8 +124,8 @@ describe("moure pistes", () => {
 
   it("no es mou als extrems", () => {
     const p = emptyPattern();
-    expect(moveTrack(p, "bombo", -1)).toBe(p);
-    expect(moveTrack(p, "cencerro", 1)).toBe(p);
+    expect(moveTrack(p, ids(p)[0], -1)).toBe(p);
+    expect(moveTrack(p, ids(p)[p.tracks.length - 1], 1)).toBe(p);
   });
 
   it("no perd ni duplica cap pista", () => {
@@ -160,6 +156,6 @@ describe("ids i colors", () => {
     for (const t of p.tracks) {
       expect(TRACK_COLORS as readonly string[], t.kind).toContain(t.color);
     }
-    expect(VOICE_KINDS.length).toBe(8);
+    expect(VOICE_KINDS.length).toBe(10);
   });
 });

@@ -10,6 +10,8 @@ type ToneModule = typeof import("tone");
 type Destination = import("tone").InputNode;
 
 export type VoiceKind =
+  | "baix"
+  | "acords"
   | "bombo"
   | "caixa"
   | "palmada"
@@ -228,7 +230,32 @@ export interface KindSpec {
   density: number;
 }
 
+/** Les veus que toquen notes en comptes de cops. */
+export const MELODIC_KINDS: VoiceKind[] = ["baix", "acords"];
+
+export function isMelodic(kind: VoiceKind): boolean {
+  return MELODIC_KINDS.includes(kind);
+}
+
 export const KINDS: Record<VoiceKind, KindSpec> = {
+  baix: {
+    name: "Baix",
+    color: "slate",
+    level: -10,
+    decay: 0.3,
+    density: 0,
+    filter: { type: "lowpass", cutoff: 900, q: 1.2 },
+    blocks: ["osc", "filter", "drive", "amp"],
+  },
+  acords: {
+    name: "Acords",
+    color: "plum",
+    level: -16,
+    decay: 0.3,
+    density: 0,
+    filter: { type: "lowpass", cutoff: 2400, q: 0.8 },
+    blocks: ["osc", "filter", "drive", "amp"],
+  },
   bombo: { name: "Bombo", color: "oxblood", level: -2, decay: 0.42, density: 0.22, filter: { type: "lowpass", cutoff: 12000, q: 0.707 }, blocks: ["osc", "filter", "drive", "amp"] },
   caixa: { name: "Caixa", color: "oxblood", level: -9, decay: 0.17, density: 0.12, filter: { type: "highpass", cutoff: 1500, q: 0.707 }, blocks: ["osc", "filter", "drive", "amp"] },
   palmada: { name: "Palmada", color: "ochre", level: -10, decay: 0.11, density: 0.08, filter: { type: "bandpass", cutoff: 1100, q: 1.6 }, blocks: ["filter", "drive", "amp"] },
@@ -287,6 +314,16 @@ const semitons = (n: number) => Math.pow(2, n / 12);
 
 export interface VoiceChain {
   trigger(time: number, velocity: number): void;
+  /**
+   * Les veus melòdiques toquen notes: reben els MIDI que han de sonar alhora
+   * i quant han de durar. Les de percussió no la tenen.
+   */
+  triggerNote?(
+    time: number,
+    midis: number[],
+    duration: number,
+    velocity: number,
+  ): void;
   /** Ofega la veu; només la fan servir les que en poden ofegar d'altres. */
   release(time: number): void;
   setParams(params: VoiceParams): void;
@@ -593,7 +630,103 @@ function metalChain(
   };
 }
 
+/** Hz d'una nota MIDI. El 69 és el la de 440. */
+export const midiToHz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
+
 const FACTORIES: Record<VoiceKind, Factory> = {
+  // --- Baix: monofònic, amb filtre d'envolupant i portamento curt --------
+  baix: (Tone, out, mod) => {
+    const node = new Tone.Filter(900, "lowpass").connect(out);
+    const rig = filterRig(Tone, node);
+    const synth = new Tone.MonoSynth({
+      oscillator: { type: "sawtooth" },
+      envelope: { attack: 0.005, decay: 0.3, sustain: 0.5, release: 0.2 },
+      filterEnvelope: {
+        attack: 0.005,
+        decay: 0.18,
+        sustain: 0.3,
+        release: 0.2,
+        baseFrequency: 120,
+        octaves: 2.6,
+      },
+      portamento: 0.03,
+    }).connect(node);
+    let params: VoiceParams | null = null;
+    return {
+      // sense nota no hi ha res a tocar; l'audició fa servir la tònica
+      trigger: (t, v) => {
+        rig.trigger(t, v, 0);
+        synth.triggerAttackRelease(midiToHz(45), 0.25, t, v);
+      },
+      triggerNote: (t, midis, dur, v) => {
+        const midi = midis[0];
+        if (midi === undefined) return;
+        const pitch = (params?.pitch ?? 0) + mod(params, "pitch", v) * 12;
+        rig.trigger(t, v, mod(params, "cutoff", v));
+        synth.triggerAttackRelease(midiToHz(midi + pitch), dur, t, v);
+      },
+      release: (t) => synth.triggerRelease(t),
+      setParams: (p) => {
+        params = p;
+        synth.envelope.decay = p.decay;
+        rig.apply(p);
+      },
+      dispose: () => {
+        synth.dispose();
+        rig.dispose();
+        node.dispose();
+      },
+    };
+  },
+
+  // --- Acords: polifònic, triangular i suau ------------------------------
+  acords: (Tone, out, mod) => {
+    const chorus = new Tone.Chorus({
+      frequency: 0.6,
+      delayTime: 3.5,
+      depth: 0.35,
+      wet: 0.3,
+    }).connect(out);
+    chorus.start();
+    const node = new Tone.Filter(2400, "lowpass").connect(chorus);
+    const rig = filterRig(Tone, node);
+    const synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "triangle" },
+      envelope: { attack: 0.02, decay: 0.3, sustain: 0.45, release: 0.3 },
+    }).connect(node);
+    synth.maxPolyphony = 6;
+    let params: VoiceParams | null = null;
+    return {
+      trigger: (t, v) => {
+        rig.trigger(t, v, 0);
+        synth.triggerAttackRelease([midiToHz(60), midiToHz(64), midiToHz(67)], 0.4, t, v);
+      },
+      triggerNote: (t, midis, dur, v) => {
+        if (midis.length === 0) return;
+        const pitch = (params?.pitch ?? 0) + mod(params, "pitch", v) * 12;
+        rig.trigger(t, v, mod(params, "cutoff", v));
+        synth.triggerAttackRelease(
+          midis.slice(0, 6).map((m) => midiToHz(m + pitch)),
+          dur,
+          t,
+          v,
+        );
+      },
+      release: (t) => synth.releaseAll(t),
+      setParams: (p) => {
+        params = p;
+        synth.set({ envelope: { decay: p.decay } });
+        rig.apply(p);
+      },
+      dispose: () => {
+        synth.dispose();
+        rig.dispose();
+        node.dispose();
+        chorus.dispose();
+      },
+    };
+  },
+
   bombo: (Tone, out, mod) =>
     membraneChain(Tone, out, mod, {
       nota: "C1",

@@ -21,6 +21,14 @@ export interface DrumKit {
   ensureTrack(id: string, kind: VoiceKind): void;
   removeTrack(id: string): void;
   trigger(id: string, time: number, velocity: number): void;
+  /** Les veus melòdiques: quins MIDI sonen alhora i quant duren. */
+  triggerNote(
+    id: string,
+    time: number,
+    midis: number[],
+    duration: number,
+    velocity: number,
+  ): void;
   /**
    * `trim` és el retoc de l'usuari en dB, relatiu al nivell propi del tipus
    * de veu: 0 vol dir "tal com ve de fàbrica", no "a tot drap".
@@ -154,6 +162,20 @@ export function createKit(Tone: ToneModule): DrumKit {
         e.drive.wet.value = d;
       }
       e.chain.trigger(time, velocity);
+    },
+
+    triggerNote(id, time, midis, duration, velocity) {
+      const e = entries.get(id);
+      if (!e?.chain.triggerNote) return;
+      if (e.params) {
+        const d = Math.max(
+          0,
+          Math.min(1, e.params.drive + mod(e.params, "drive", velocity)),
+        );
+        e.drive.distortion = d;
+        e.drive.wet.value = d;
+      }
+      e.chain.triggerNote(time, midis, duration, velocity);
     },
 
     setVolume(id, trim) {

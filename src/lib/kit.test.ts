@@ -78,6 +78,22 @@ function toneFals(reg: Registre) {
         return node({ decay: 2.2, wet: { value: 1 }, generate: async () => {} });
       }
     },
+    MonoSynth: class { constructor() { return synth("mono"); } },
+    PolySynth: class {
+      constructor() {
+        const n = synth("poly");
+        Object.assign(n, { maxPolyphony: 0, set: () => n, releaseAll: () => {} });
+        return n;
+      }
+    },
+    Synth: class {},
+    Chorus: class {
+      constructor() {
+        const n = node({ wet: { value: 0 } });
+        Object.assign(n, { start: () => n });
+        return n;
+      }
+    },
     FeedbackDelay: class {
       constructor() {
         return node({

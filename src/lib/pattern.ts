@@ -1,7 +1,9 @@
+import type { ChordKind, Key } from "./theory";
 import {
   DECAY_MAX,
   DECAY_MIN,
   defaultParams,
+  isMelodic,
   KINDS,
   MAX_MACROS,
   MAX_TRACKS,
@@ -14,6 +16,8 @@ import {
 
 export const STEPS = 16;
 
+export * from "./theory";
+export { isMelodic, MELODIC_KINDS, midiToHz } from "./voices";
 export {
   canRoute,
   DECAY_MAX,
@@ -102,13 +106,54 @@ export function defaultReturns(): Returns {
  * Una pista del patró. L'ordre de l'array `tracks` és l'ordre visual, i `id`
  * és el que fa servir el kit per trobar la seva cadena de síntesi.
  */
+/** Una nota del baix. `length` és en passos: cobreix els que vénen darrere. */
+export interface BassNote {
+  midi: number;
+  length: number;
+  accent: boolean;
+}
+
+/** Un acord: es resol amb la tonalitat del patró en el moment de sonar. */
+export interface ChordNote {
+  degree: number;
+  kind: ChordKind;
+  length: number;
+  octave: -1 | 0 | 1;
+}
+
+export type BassStep = BassNote | null;
+export type ChordStep = ChordNote | null;
+
+/**
+ * La nota des d'on es munten els acords. El Do3: així una tríada de la menor
+ * cau a La3-Do4-Mi4, just per damunt del baix i sense envair-lo. Amb el Do
+ * central quedava una octava massa amunt i sonava a caixa de música.
+ */
+export const CHORD_BASE_MIDI = 48;
+
+export const BASS_MAX_LENGTH = 4;
+export const CHORD_MAX_LENGTH = 8;
+
+export function emptyBass(): BassStep[] {
+  return Array<BassStep>(STEPS).fill(null);
+}
+
+export function emptyChords(): ChordStep[] {
+  return Array<ChordStep>(STEPS).fill(null);
+}
+
 export interface Track {
   id: string;
   name: string;
   kind: VoiceKind;
   /** Nom d'un color de la paleta de globals.css. */
   color: string;
+  /** Els passos de percussió. A les pistes melòdiques, tot a zero. */
   steps: Cell[];
+  /** Només a les pistes de tipus "baix". */
+  bass?: BassStep[];
+  /** Només a les pistes de tipus "acords". */
+  chords?: ChordStep[];
   mix: ChannelMix;
   sound: VoiceParams;
 }
@@ -186,6 +231,8 @@ export interface Pattern {
   tracks: Track[];
   macros: Macro[];
   returns: Returns;
+  /** Tonalitat i mode. Els acords són graus; el baix, MIDI absoluts. */
+  key: Key;
 }
 
 export function emptyLane(): Cell[] {
@@ -208,14 +255,25 @@ export function makeTrack(kind: VoiceKind, id: string = kind): Track {
     kind,
     color: KINDS[kind].color,
     steps: emptyLane(),
+    ...(kind === "baix" ? { bass: emptyBass() } : {}),
+    ...(kind === "acords" ? { chords: emptyChords() } : {}),
     mix: defaultMix(),
     sound: defaultParams(kind),
   };
 }
 
-/** Una pista per tipus de veu, en l'ordre en què els declara voices.ts. */
+/** La fonamental per defecte: la menor, que no porta cap alteració. */
+export const DEFAULT_KEY: Key = { root: 9, mode: "minor" };
+
+/**
+ * Les vuit de percussió més el baix i els acords, en aquest ordre: la
+ * percussió a dalt i les melòdiques a sota, separades.
+ */
 export function defaultTracks(): Track[] {
-  return VOICE_KINDS.map((k) => makeTrack(k));
+  return [
+    ...VOICE_KINDS.filter((k) => !isMelodic(k)),
+    ...VOICE_KINDS.filter(isMelodic),
+  ].map((k) => makeTrack(k));
 }
 
 export function emptyPattern(name = "Sense títol"): Pattern {
@@ -226,6 +284,7 @@ export function emptyPattern(name = "Sense títol"): Pattern {
     tracks: defaultTracks(),
     macros: defaultMacros(),
     returns: defaultReturns(),
+    key: DEFAULT_KEY,
   };
 }
 
@@ -233,6 +292,8 @@ export function cloneTrack(t: Track): Track {
   return {
     ...t,
     steps: [...t.steps],
+    ...(t.bass ? { bass: t.bass.map((n) => (n ? { ...n } : null)) } : {}),
+    ...(t.chords ? { chords: t.chords.map((c) => (c ? { ...c } : null)) } : {}),
     mix: { ...t.mix },
     sound: {
       ...t.sound,
@@ -255,6 +316,7 @@ export function clonePattern(p: Pattern): Pattern {
       assignments: m.assignments.map((a) => ({ ...a })),
     })),
     returns: { a: { ...p.returns.a }, b: { ...p.returns.b } },
+    key: { ...p.key },
   };
 }
 
@@ -345,40 +407,132 @@ export function lane(spec: string): Cell[] {
   return cells;
 }
 
+/** [pas, MIDI, llargada] — el baix, en notes absolutes. */
+type BassSpec = [number, number, number][];
+/** [pas, grau, llargada, octava] — els acords, en graus de la tonalitat. */
+type ChordSpec = [number, number, number, -1 | 0 | 1][];
+
 function build(
   name: string,
   bpm: number,
   swing: number,
   lanes: Partial<Record<VoiceKind, string>>,
+  key: Key = DEFAULT_KEY,
+  bass: BassSpec = [],
+  chords: ChordSpec = [],
 ): Pattern {
   const p = emptyPattern(name);
   p.bpm = bpm;
   p.swing = swing;
+  p.key = { ...key };
   for (const [kind, spec] of Object.entries(lanes)) {
     const track = p.tracks.find((t) => t.kind === (kind as VoiceKind));
     if (track) track.steps = lane(spec as string);
   }
+  const baix = p.tracks.find((t) => t.kind === "baix");
+  if (baix?.bass) {
+    for (const [i, midi, length] of bass) {
+      baix.bass[i] = { midi, length, accent: i % 4 === 0 };
+    }
+  }
+  const acords = p.tracks.find((t) => t.kind === "acords");
+  if (acords?.chords) {
+    for (const [i, degree, length, octave] of chords) {
+      acords.chords[i] = { degree, kind: "triad", length, octave };
+    }
+  }
   return p;
 }
 
+// Notes MIDI que fem servir als exemples, per no escriure xifres pelades.
+const LA2 = 45;
+const SI2 = 47;
+const DO3 = 48;
+const RE3 = 50;
+const MI3 = 52;
+const FA2 = 41;
+const SOL2 = 43;
+
+const LA_MENOR: Key = { root: 9, mode: "minor" };
+const RE_DORIC: Key = { root: 2, mode: "dorian" };
+
 export const PRESETS: Pattern[] = [
-  build("Quatre per terra", 124, 0, {
-    bombo: "X...x...X...x...",
-    charles: "..x...x...x...x.",
-    palmada: "....X.......X...",
-    charlesObert: "............x...",
-  }),
-  build("Trencat", 92, 0.18, {
-    bombo: "X.....x..X......",
-    caixa: "....X.......X...",
-    charles: "x.x.x.x.x.x.xxx.",
-    aro: "..x........x....",
-  }),
-  build("Cambra lenta", 76, 0.32, {
-    bombo: "X.......x.......",
-    caixa: "....X.......X..x",
-    charles: "x.x.x.x.x.x.x.x.",
-    cencerro: "........x.......",
-    timbal: "..............x.",
-  }),
+  // i - VI - III - VII a la menor, amb el baix fent fonamental i quinta
+  build(
+    "Quatre per terra",
+    124,
+    0,
+    {
+      bombo: "X...x...X...x...",
+      charles: "..x...x...x...x.",
+      palmada: "....X.......X...",
+      charlesObert: "............x...",
+    },
+    LA_MENOR,
+    [
+      [0, LA2, 2],
+      [2, MI3, 2],
+      [4, FA2, 2],
+      [6, DO3, 2],
+      [8, DO3, 2],
+      [10, SOL2, 2],
+      [12, SOL2, 2],
+      [14, RE3, 2],
+    ],
+    [
+      [0, 1, 4, 0],
+      [4, 6, 4, 0],
+      [8, 3, 4, 0],
+      [12, 7, 4, 0],
+    ],
+  ),
+  // i - IV a re dòric: el IV major és el que fa que soni dòric i no menor
+  build(
+    "Trencat",
+    92,
+    0.18,
+    {
+      bombo: "X.....x..X......",
+      caixa: "....X.......X...",
+      charles: "x.x.x.x.x.x.xxx.",
+      aro: "..x........x....",
+    },
+    RE_DORIC,
+    [
+      [0, RE3 - 12, 3],
+      [3, RE3 - 12, 1],
+      [6, DO3, 2],
+      [8, SOL2, 3],
+      [11, SI2, 1],
+      [14, DO3, 2],
+    ],
+    [
+      [0, 1, 8, 0],
+      [8, 4, 8, 0],
+    ],
+  ),
+  // dos acords llargs i un baix que amb prou feines es mou
+  build(
+    "Cambra lenta",
+    76,
+    0.32,
+    {
+      bombo: "X.......x.......",
+      caixa: "....X.......X..x",
+      charles: "x.x.x.x.x.x.x.x.",
+      cencerro: "........x.......",
+      timbal: "..............x.",
+    },
+    LA_MENOR,
+    [
+      [0, LA2, 4],
+      [6, DO3, 2],
+      [8, FA2, 4],
+      [14, DO3, 2],
+    ],
+    [
+      [0, 1, 8, 0],
+      [8, 6, 8, 0],
+    ],
+  ),
 ];

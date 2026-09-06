@@ -13,6 +13,10 @@ import {
   STEPS,
   MAX_LFO,
   MAX_MACROS,
+  degreeToChord,
+  isInScale,
+  isMelodic,
+  midiToName,
   MOD_TARGETS,
   VOICE_KINDS,
   anySolo,
@@ -28,9 +32,13 @@ describe("model del patró", () => {
     }
   });
 
-  it("posa les vuit veus de percussió, en ordre, a cada preset", () => {
+  it("posa la percussió a dalt i les melòdiques a sota, a cada preset", () => {
+    const esperat = [
+      ...VOICE_KINDS.filter((k) => !isMelodic(k)),
+      ...VOICE_KINDS.filter(isMelodic),
+    ];
     for (const p of PRESETS) {
-      expect(p.tracks.map((t) => t.kind)).toEqual(VOICE_KINDS);
+      expect(p.tracks.map((t) => t.kind), p.name).toEqual(esperat);
     }
   });
 
@@ -56,7 +64,7 @@ describe("model del patró", () => {
     const a = emptyPattern("a");
     const b = clonePattern(a);
     b.tracks.pop();
-    expect(a.tracks).toHaveLength(8);
+    expect(a.tracks).toHaveLength(10);
   });
 });
 
@@ -96,6 +104,8 @@ describe("comandaments de so per defecte", () => {
 
   it("posa el filtre de cada veu al que ja tenia la seva cadena", () => {
     const esperat: Record<string, [string, number]> = {
+      baix: ["lowpass", 900],
+      acords: ["lowpass", 2400],
       bombo: ["lowpass", 12000],
       caixa: ["highpass", 1500],
       palmada: ["bandpass", 1100],
@@ -117,6 +127,39 @@ describe("comandaments de so per defecte", () => {
     }
   });
 
+  it("dona una fila de notes a les pistes melòdiques i a cap més", () => {
+    const p = emptyPattern();
+    for (const t of p.tracks) {
+      if (t.kind === "baix") {
+        expect(t.bass, t.id).toHaveLength(STEPS);
+        expect(t.chords, t.id).toBeUndefined();
+      } else if (t.kind === "acords") {
+        expect(t.chords, t.id).toHaveLength(STEPS);
+        expect(t.bass, t.id).toBeUndefined();
+      } else {
+        expect(t.bass, t.id).toBeUndefined();
+        expect(t.chords, t.id).toBeUndefined();
+      }
+    }
+  });
+
+  it("clona les notes sense compartir-les", () => {
+    const a = emptyPattern();
+    const baix = a.tracks.find((t) => t.kind === "baix")!;
+    baix.bass![0] = { midi: 45, length: 2, accent: false };
+    const b = clonePattern(a);
+    b.tracks.find((t) => t.kind === "baix")!.bass![0]!.midi = 60;
+    expect(baix.bass![0]!.midi).toBe(45);
+  });
+
+  it("dona tonalitat al patró i la clona a part", () => {
+    const a = emptyPattern();
+    expect(a.key).toEqual({ root: 9, mode: "minor" });
+    const b = clonePattern(a);
+    b.key.root = 0;
+    expect(a.key.root).toBe(9);
+  });
+
   it("dona quatre macros buides al patró", () => {
     const p = emptyPattern();
     expect(p.macros).toHaveLength(MAX_MACROS);
@@ -133,6 +176,8 @@ describe("comandaments de so per defecte", () => {
 
   it("dona a cada veu la caiguda que tenia la cadena, dins del marge", () => {
     const esperat: Record<string, number> = {
+      baix: 0.3,
+      acords: 0.3,
       bombo: 0.42,
       caixa: 0.17,
       palmada: 0.11,
@@ -223,5 +268,97 @@ describe("silenci i solitari", () => {
     p.tracks[1].mix.solo = true;
     p.tracks[1].mix.muted = true;
     expect(isAudible(p, p.tracks[1])).toBe(false);
+  });
+});
+
+describe("baix i acords dels presets", () => {
+  const melodica = (p: (typeof PRESETS)[number], kind: "baix" | "acords") =>
+    p.tracks.find((t) => t.kind === kind)!;
+
+  it("dona setze cel·les a les dues files melòdiques", () => {
+    for (const p of PRESETS) {
+      expect(melodica(p, "baix").bass, p.name).toHaveLength(STEPS);
+      expect(melodica(p, "acords").chords, p.name).toHaveLength(STEPS);
+    }
+  });
+
+  it("posa notes de baix i acords a tots els presets", () => {
+    for (const p of PRESETS) {
+      expect(
+        melodica(p, "baix").bass!.filter(Boolean).length,
+        p.name,
+      ).toBeGreaterThan(3);
+      expect(
+        melodica(p, "acords").chords!.filter(Boolean).length,
+        p.name,
+      ).toBeGreaterThan(1);
+    }
+  });
+
+  it("no deixa que cap nota trepitgi la següent", () => {
+    for (const p of PRESETS) {
+      for (const fila of [melodica(p, "baix").bass!, melodica(p, "acords").chords!]) {
+        for (let i = 0; i < fila.length; i++) {
+          const n = fila[i];
+          if (!n) continue;
+          for (let j = i + 1; j < i + n.length; j++) {
+            expect(fila[j], `${p.name} pas ${i} cobreix ${j}`).toBeNull();
+          }
+          expect(i + n.length, `${p.name} pas ${i} surt del compàs`).toBeLessThanOrEqual(STEPS);
+        }
+      }
+    }
+  });
+
+  it("manté el baix dins d'un registre que es pugui tocar", () => {
+    for (const p of PRESETS) {
+      for (const n of melodica(p, "baix").bass!) {
+        if (!n) continue;
+        // de Mi1 a Do4: prou greu per fer de baix i prou agut per sentir-se
+        expect(n.midi, p.name).toBeGreaterThanOrEqual(28);
+        expect(n.midi, p.name).toBeLessThanOrEqual(60);
+      }
+    }
+  });
+
+  it("fa que cada nota del baix sigui de l'escala del patró", () => {
+    for (const p of PRESETS) {
+      for (const n of melodica(p, "baix").bass!) {
+        if (!n) continue;
+        expect(isInScale(p.key, n.midi), `${p.name} ${midiToName(n.midi)}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("fa servir graus que existeixen i acords que sonen sencers", () => {
+    for (const p of PRESETS) {
+      for (const c of melodica(p, "acords").chords!) {
+        if (!c) continue;
+        expect(c.degree, p.name).toBeGreaterThanOrEqual(1);
+        expect(c.degree, p.name).toBeLessThanOrEqual(7);
+        expect(degreeToChord(p.key, c.degree, c.kind), p.name).toHaveLength(3);
+      }
+    }
+  });
+
+  it("comença cada preset amb la tònica al primer pas", () => {
+    for (const p of PRESETS) {
+      const primer = melodica(p, "acords").chords![0];
+      expect(primer?.degree, p.name).toBe(1);
+      const nota = melodica(p, "baix").bass![0];
+      expect(nota, p.name).not.toBeNull();
+      expect(nota!.midi % 12, p.name).toBe(p.key.root);
+    }
+  });
+
+  it("dona al 'Trencat' el IV major que caracteritza el dòric", () => {
+    const trencat = PRESETS.find((p) => p.name === "Trencat")!;
+    expect(trencat.key.mode).toBe("dorian");
+    const quart = melodica(trencat, "acords").chords!.find((c) => c?.degree === 4);
+    expect(quart).toBeTruthy();
+    const acord = degreeToChord(trencat.key, 4, "triad");
+    expect(acord[1] - acord[0]).toBe(4);
   });
 });

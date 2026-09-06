@@ -5,6 +5,11 @@ import {
   defaultMix,
   defaultParams,
   defaultReturns,
+  DEFAULT_KEY,
+  emptyBass,
+  emptyChords,
+  BASS_MAX_LENGTH,
+  CHORD_MAX_LENGTH,
   defaultTracks,
   emptyLane,
   emptyPattern,
@@ -14,7 +19,11 @@ import {
   MOD_TARGETS,
   SYNC_RATES,
   type Cell,
+  type BassStep,
   type ChannelMix,
+  type ChordStep,
+  type Key,
+  type Mode,
   type EnvParams,
   type FilterParams,
   type LfoParams,
@@ -264,7 +273,88 @@ function fromLegacy(old: LegacyPattern): Pattern {
     })),
     macros: defaultMacros(),
     returns: defaultReturns(),
+    key: { ...DEFAULT_KEY },
   };
+}
+
+const MODES: Mode[] = [
+  "major",
+  "minor",
+  "dorian",
+  "mixolydian",
+  "pentMin",
+  "pentMaj",
+];
+
+/** Els patrons anteriors a les pistes melòdiques no porten tonalitat. */
+function normaliseKey(raw: unknown): Key {
+  if (!isObject(raw)) return { ...DEFAULT_KEY };
+  const root = Math.round(num(raw.root, DEFAULT_KEY.root));
+  return {
+    root: ((root % 12) + 12) % 12,
+    mode: MODES.includes(raw.mode as Mode)
+      ? (raw.mode as Mode)
+      : DEFAULT_KEY.mode,
+  };
+}
+
+/**
+ * Les notes del baix i dels acords. Es descarta el que no s'entengui i es
+ * retallen les llargades: una nota que sobresurti del compàs trepitjaria
+ * passos que no existeixen.
+ */
+function normaliseBass(raw: unknown): BassStep[] {
+  const out = emptyBass();
+  if (!Array.isArray(raw)) return out;
+  for (let i = 0; i < out.length; i++) {
+    const v = raw[i];
+    if (!isObject(v) || typeof v.midi !== "number") continue;
+    out[i] = {
+      midi: clamp(Math.round(v.midi), 0, 127),
+      length: clamp(Math.round(num(v.length, 1)), 1, BASS_MAX_LENGTH),
+      accent: v.accent === true,
+    };
+  }
+  return netejaSolapaments(out);
+}
+
+function normaliseChords(raw: unknown): ChordStep[] {
+  const out = emptyChords();
+  if (!Array.isArray(raw)) return out;
+  for (let i = 0; i < out.length; i++) {
+    const v = raw[i];
+    if (!isObject(v) || typeof v.degree !== "number") continue;
+    const octave = Math.round(num(v.octave, 0));
+    out[i] = {
+      degree: clamp(Math.round(v.degree), 1, 7),
+      kind: v.kind === "seventh" ? "seventh" : "triad",
+      length: clamp(Math.round(num(v.length, 4)), 1, CHORD_MAX_LENGTH),
+      octave: (octave < 0 ? -1 : octave > 0 ? 1 : 0) as -1 | 0 | 1,
+    };
+  }
+  return netejaSolapaments(out);
+}
+
+/**
+ * Una nota llarga cobreix els passos de darrere, i allà no n'hi pot haver cap
+ * altra. Si el que ve del navegador en porta, es retalla la primera.
+ */
+function netejaSolapaments<T extends { length: number } | null>(
+  files: T[],
+): T[] {
+  for (let i = 0; i < files.length; i++) {
+    const n = files[i];
+    if (!n) continue;
+    let cap = n.length;
+    for (let j = i + 1; j < Math.min(i + n.length, files.length); j++) {
+      if (files[j]) {
+        cap = j - i;
+        break;
+      }
+    }
+    if (cap !== n.length) files[i] = { ...n, length: cap };
+  }
+  return files;
 }
 
 function normaliseTrack(raw: unknown, index: number): Track | null {
@@ -279,6 +369,8 @@ function normaliseTrack(raw: unknown, index: number): Track | null {
     kind,
     color: typeof raw.color === "string" ? raw.color : KINDS[kind].color,
     steps: normaliseSteps(raw.steps),
+    ...(kind === "baix" ? { bass: normaliseBass(raw.bass) } : {}),
+    ...(kind === "acords" ? { chords: normaliseChords(raw.chords) } : {}),
     mix: normaliseMix(raw.mix),
     sound: normaliseSound(kind, raw.sound),
   };
@@ -308,6 +400,7 @@ export function normalise(value: unknown): Pattern {
       tracks: tracks.length > 0 ? tracks : defaultTracks(),
       macros: normaliseMacros(value.macros),
       returns: normaliseReturns(value.returns),
+      key: normaliseKey(value.key),
     };
   }
 

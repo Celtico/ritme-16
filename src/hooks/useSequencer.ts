@@ -5,7 +5,9 @@ import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
 import {
   addTrack as add,
   applyMacroAssignment,
+  CHORD_BASE_MIDI,
   clonePattern,
+  degreeToChord,
   duplicateTrack as duplicate,
   emptyLane,
   isAudible,
@@ -88,9 +90,39 @@ export function useSequencer() {
       seqRef.current = new Tone.Sequence(
         (time, step) => {
           const p = patternRef.current;
+          // la durada d'un pas surt del tempo, no d'una constant
+          const pas = Tone.Time("16n").toSeconds();
           for (const t of p.tracks) {
+            if (!isAudible(p, t)) continue;
+
+            const nota = t.bass?.[step];
+            if (nota) {
+              kit.triggerNote(
+                t.id,
+                time,
+                [nota.midi],
+                pas * nota.length,
+                nota.accent ? ACCENT_VELOCITY : NORMAL_VELOCITY,
+              );
+              continue;
+            }
+
+            const acord = t.chords?.[step];
+            if (acord) {
+              kit.triggerNote(
+                t.id,
+                time,
+                degreeToChord(p.key, acord.degree, acord.kind).map(
+                  (n) => n + CHORD_BASE_MIDI + acord.octave * 12,
+                ),
+                pas * acord.length,
+                NORMAL_VELOCITY,
+              );
+              continue;
+            }
+
             const cell = t.steps[step];
-            if (!cell || !isAudible(p, t)) continue;
+            if (!cell) continue;
             kit.trigger(
               t.id,
               time,

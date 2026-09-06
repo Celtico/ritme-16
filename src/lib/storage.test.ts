@@ -151,7 +151,7 @@ describe("normalise del model nou", () => {
       ...p,
       tracks: [...p.tracks, { id: "x", kind: "teremin", steps: [], mix: {} }],
     };
-    expect(normalise(brut).tracks).toHaveLength(8);
+    expect(normalise(brut).tracks).toHaveLength(10);
   });
 
   it("desfà els ids repetits, que farien compartir cadena de síntesi", () => {
@@ -173,9 +173,9 @@ describe("normalise del model nou", () => {
   });
 
   it("no es queda mai sense pistes", () => {
-    expect(normalise({ bpm: 100, tracks: [] }).tracks).toHaveLength(8);
-    expect(normalise(null).tracks).toHaveLength(8);
-    expect(normalise("brossa").tracks).toHaveLength(8);
+    expect(normalise({ bpm: 100, tracks: [] }).tracks).toHaveLength(10);
+    expect(normalise(null).tracks).toHaveLength(10);
+    expect(normalise("brossa").tracks).toHaveLength(10);
   });
 
   it("no comparteix estructures amb el patró d'entrada", () => {
