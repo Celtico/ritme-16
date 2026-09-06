@@ -167,6 +167,23 @@ export const STYLES: StyleSpec[] = [
         }
       },
       (p) => afegeixA(p, "caixa", dosIQuatre(p)),
+      // La caixa és l'àncora, i amb més de mig patró en silenci cada cop de
+      // més se sent i li treu pes al que toca. Es queda als contratemps
+      // forts i, com a molt, un sol fantasma a tot el patró.
+      (p) => {
+        const c = veu(p, "caixa");
+        if (!c) return;
+        const forts = new Set(dosIQuatre(p));
+        let fantasma = false;
+        for (let i = 0; i < p.length; i++) {
+          if (!c.steps[i] || forts.has(i)) continue;
+          if (fantasma) c.steps[i] = 0;
+          else {
+            c.steps[i] = 1;
+            fantasma = true;
+          }
+        }
+      },
     ],
     sound: {
       bombo: (r) => ({ decay: 0.5 + r() * 0.4, filter: { type: "lowpass", cutoff: 3000 + r() * 3000, q: 0.9 } }),
@@ -231,6 +248,23 @@ export const STYLES: StyleSpec[] = [
         nomesA(p, "charlesObert", passos, 1);
       },
       (p) => afegeixA(p, "caixa", dosIQuatre(p)),
+      // La caixa és l'àncora, i amb més de mig patró en silenci cada cop de
+      // més se sent i li treu pes al que toca. Es queda als contratemps
+      // forts i, com a molt, un sol fantasma a tot el patró.
+      (p) => {
+        const c = veu(p, "caixa");
+        if (!c) return;
+        const forts = new Set(dosIQuatre(p));
+        let fantasma = false;
+        for (let i = 0; i < p.length; i++) {
+          if (!c.steps[i] || forts.has(i)) continue;
+          if (fantasma) c.steps[i] = 0;
+          else {
+            c.steps[i] = 1;
+            fantasma = true;
+          }
+        }
+      },
     ],
     sound: {
       bombo: (r) => ({ decay: 0.55 + r() * 0.4, filter: { type: "lowpass", cutoff: 1200 + r() * 1500, q: 1.1 } }),

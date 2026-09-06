@@ -187,6 +187,21 @@ describe("les regles de gènere se senten al resultat", () => {
     }
   });
 
+  it("trip-hop: la caixa només als contratemps forts i un sol fantasma", () => {
+    // la llavor 4 en tenia tres d'escampades abans d'aquesta regla
+    for (const seed of [4, 5, 6, 7, 8, 10, 11, 14, 19, 20]) {
+      const p = generate(styleById("triphop")!, seed).song.slots[0].pattern;
+      const c = p.tracks.find((t) => t.kind === "caixa")!;
+      const forts = new Set<number>();
+      for (let b = 0; b * 16 < p.length; b++) forts.add(b * 16 + 4).add(b * 16 + 12);
+      let fantasmes = 0;
+      for (let i = 0; i < p.length; i++) {
+        if (c.steps[i] && !forts.has(i)) fantasmes++;
+      }
+      expect(fantasmes, `llavor ${seed}`).toBeLessThanOrEqual(1);
+    }
+  });
+
   it("techno: decay curt i saturació alta al bombo", () => {
     for (let seed = 1; seed <= 20; seed++) {
       const p = generate(styleById("techno")!, seed).song.slots[0].pattern;
