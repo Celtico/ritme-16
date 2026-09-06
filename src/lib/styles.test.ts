@@ -215,6 +215,18 @@ describe("les regles de gènere se senten al resultat", () => {
     }
   });
 
+  it("ternari: el timbal no cau mai sobre el tresillo", () => {
+    // les vint llavors ho feien abans d'aquesta regla
+    for (let seed = 1; seed <= 20; seed++) {
+      const p = generate(styleById("ternari")!, seed).song.slots[0].pattern;
+      const t = p.tracks.find((x) => x.kind === "timbal")!;
+      const k = p.tracks.find((x) => x.kind === "bombo")!;
+      for (let i = 0; i < p.length; i++) {
+        expect(t.steps[i] && k.steps[i], `llavor ${seed}, pas ${i}`).toBeFalsy();
+      }
+    }
+  });
+
   it("techno: decay curt i saturació alta al bombo", () => {
     for (let seed = 1; seed <= 20; seed++) {
       const p = generate(styleById("techno")!, seed).song.slots[0].pattern;

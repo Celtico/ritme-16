@@ -317,6 +317,15 @@ export const STYLES: StyleSpec[] = [
       },
       // el charles només als temps, per no tapar el tresillo
       (p) => nomesA(p, "charles", temps(p), 1),
+      // És l'estil més dens (30,6 cel·les, i dotze les posa el bombo) i el
+      // timbal hi queia a sobre dues vegades per patró: dues veus greus
+      // juntes al patró més carregat. El timbal s'aparta del tresillo.
+      (p) => {
+        const t = veu(p, "timbal");
+        const k = veu(p, "bombo");
+        if (!t || !k) return;
+        for (let i = 0; i < p.length; i++) if (k.steps[i]) t.steps[i] = 0;
+      },
     ],
     sound: {
       timbal: (r) => ({ decay: 0.25 + r() * 0.2 }),
