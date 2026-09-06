@@ -135,7 +135,7 @@ export function VisualPanel({ read }: Props) {
   };
 
   return (
-    <div ref={contenidor} className="relative h-full min-h-[140px] w-full">
+    <div ref={contenidor} className="relative h-full w-full">
       <canvas
         ref={canvas}
         onPointerDown={onDown}

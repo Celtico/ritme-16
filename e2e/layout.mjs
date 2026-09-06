@@ -95,16 +95,28 @@ for (const [width, height] of AMPLADES) {
   await page.locator('button[title^="So de Bombo"]').first().click();
   await page.waitForTimeout(400);
 
-  const { desbordaments, fora } = await page.evaluate(mesura);
-  await page.screenshot({ path: `/tmp/layout-${width}.png`, fullPage: false });
+  // Es miren les dues pestanyes del panell inferior: la de so, que és la
+  // que té més controls, i la visual, que fa créixer el panell.
+  for (const pestanya of ["So", "Visual"]) {
+    if (pestanya !== "So") {
+      await page.getByRole("button", { name: pestanya, exact: true }).click();
+      await page.waitForTimeout(600);
+    }
 
-  const be = desbordaments.length === 0 && fora.length === 0;
-  console.log(
-    `${be ? "ok  " : "FALLA"} ${width}×${height} — desbordaments: ${desbordaments.length}, fora: ${fora.length}`,
-  );
-  for (const d of desbordaments) console.log(`        desborda: ${d}`);
-  for (const f of fora) console.log(`        fora: ${f}`);
-  if (!be) errors++;
+    const { desbordaments, fora } = await page.evaluate(mesura);
+    await page.screenshot({
+      path: `/tmp/layout-${width}-${pestanya}.png`,
+      fullPage: false,
+    });
+
+    const be = desbordaments.length === 0 && fora.length === 0;
+    console.log(
+      `${be ? "ok  " : "FALLA"} ${width}×${height} ${pestanya} — desbordaments: ${desbordaments.length}, fora: ${fora.length}`,
+    );
+    for (const d of desbordaments) console.log(`        desborda: ${d}`);
+    for (const f of fora) console.log(`        fora: ${f}`);
+    if (!be) errors++;
+  }
   await context.close();
 }
 

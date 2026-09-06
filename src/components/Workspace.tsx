@@ -440,6 +440,13 @@ export function Workspace() {
               Clica el nom d&apos;una pista per veure&apos;n els comandaments de so.
             </p>
           )}
+          {/* Amb la vista 3D el panell no es desplaça: qui es desplaça és el
+              banc, que si no s'emportaria tota l'alçada en un mòbil. */}
+          <div
+            className={
+              tab === "visual" ? "max-h-[60%] shrink-0 overflow-y-auto" : ""
+            }
+          >
           <PatternBank
             pattern={seq.pattern}
             onLoad={seq.loadPattern}
@@ -450,6 +457,7 @@ export function Workspace() {
             dirty={seq.dirty}
             onGenerate={seq.loadSong}
           />
+          </div>
         </div>
       </div>
     </div>
