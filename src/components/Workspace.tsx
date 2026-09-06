@@ -7,6 +7,8 @@ import { ReturnRows } from "./ReturnRows";
 import { SceneColumn } from "./SceneColumn";
 import { SlotBank } from "./SlotBank";
 import { SoundPanel } from "./SoundPanel";
+import { VisualPanel } from "./visual/VisualPanel";
+import { useVisualSource } from "./visual/useVisualSource";
 import { MelodyRow } from "./MelodyRow";
 import { StepRow } from "./StepRow";
 import { StepRuler } from "./StepRuler";
@@ -102,6 +104,13 @@ export function Workspace() {
   const { tracks } = seq.pattern;
   const openTrack = tracks.find((t) => t.id === soundTrack);
   const levels = useMeters(seq.readLevels, seq.isPlaying);
+  const [tab, setTab] = useState<"so" | "visual">("so");
+  const visualRead = useVisualSource({
+    pattern: seq.pattern,
+    currentStep: seq.currentStep,
+    isPlaying: seq.isPlaying,
+    readLevels: seq.readLevels,
+  });
   const hotkeys = new Map(tracks.slice(0, 8).map((t, i) => [t.id, String(i + 1)]));
 
   const { toggleTransport, audition, loadPattern } = seq;
@@ -370,12 +379,12 @@ export function Workspace() {
           una frase: es queda a l'alçada del seu contingut. */}
       <div
         style={{
-          height: openTrack ? panelHeight : undefined,
+          height: openTrack || tab === "visual" ? panelHeight : undefined,
           maxHeight: estret ? "38vh" : undefined,
         }}
         className="flex min-h-0 flex-col"
       >
-        {openTrack ? (
+        {openTrack || tab === "visual" ? (
           <Divider
             axis="y"
             label="Alçada del panell inferior"
@@ -384,15 +393,25 @@ export function Workspace() {
         ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto border-t border-ink/15">
           <div className="flex gap-1 px-3 pt-2">
-            <button
-              type="button"
-              aria-pressed
-              className="border-b-2 border-oxblood bg-panel-hi px-2 py-1 text-[13px] text-ink"
-            >
-              So
-            </button>
+            {(["so", "visual"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={tab === t}
+                onClick={() => setTab(t)}
+                className={`px-2 py-1 text-[13px] ${
+                  tab === t
+                    ? "border-b-2 border-oxblood bg-panel-hi text-ink"
+                    : "border-b-2 border-transparent text-ink-soft hover:text-ink"
+                }`}
+              >
+                {t === "so" ? "So" : "Visual"}
+              </button>
+            ))}
           </div>
-          {openTrack ? (
+          {tab === "visual" ? (
+            <VisualPanel read={visualRead} />
+          ) : openTrack ? (
             <SoundPanel
               track={openTrack}
               tracks={tracks}
