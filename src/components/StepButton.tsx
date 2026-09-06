@@ -36,7 +36,7 @@ export function StepButton({
         onToggle(true);
       }}
       className={[
-        "h-9 w-8 shrink-0 rounded-[3px] border border-ink/40 transition-[transform,background-color] duration-75 sm:w-9",
+        "h-9 min-w-[28px] max-w-[64px] flex-1 rounded-[3px] border border-ink/40 transition-[transform,background-color] duration-75",
         "active:translate-y-px",
         FACE[cell],
         underPlayhead

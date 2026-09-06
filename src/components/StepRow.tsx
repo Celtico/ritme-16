@@ -21,7 +21,7 @@ export function StepRow({ track, currentStep, dimmed, onToggleStep }: Props) {
       style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
     >
       {GROUPS.map((g) => (
-        <div key={g} className="flex gap-1">
+        <div key={g} className="flex flex-1 gap-1">
           {track.steps.slice(g * 4, g * 4 + 4).map((cell, i) => {
             const index = g * 4 + i;
             return (

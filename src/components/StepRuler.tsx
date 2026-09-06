@@ -13,14 +13,14 @@ export function StepRuler({ currentStep }: { currentStep: number }) {
   return (
     <div className="flex gap-3" style={{ height: RULER_HEIGHT }} aria-hidden>
       {GROUPS.map((g) => (
-        <div key={g} className="flex gap-1">
+        <div key={g} className="flex flex-1 gap-1">
           {[0, 1, 2, 3].map((i) => {
             const index = g * 4 + i;
             return (
               <div
                 key={index}
                 className={[
-                  "w-8 shrink-0 text-center text-[11px] tabular-nums sm:w-9",
+                  "min-w-[28px] max-w-[64px] flex-1 text-center text-[11px] tabular-nums",
                   currentStep === index
                     ? "text-ochre"
                     : i === 0
