@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { TRACK_COLORS, type Track } from "@/lib/pattern";
 
 interface Props {
@@ -52,6 +53,10 @@ function Opcio({
   );
 }
 
+const AMPLADA = 176;
+/** Prou per a les sis opcions i la graella de colors. */
+const ALCADA = 250;
+
 export function TrackMenu({
   track,
   first,
@@ -71,14 +76,45 @@ export function TrackMenu({
   const [confirmant, setConfirmant] = useState(false);
   const [text, setText] = useState(track.name);
   const caixa = useRef<HTMLDivElement | null>(null);
+  const boto = useRef<HTMLButtonElement | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  /**
+   * El menú es dibuixa amb un portal al body i es col·loca a mà. Dins la fila
+   * quedava tallat pel desplaçament del panell i per sota de les altres
+   * files, que és el que passava abans.
+   */
+  useLayoutEffect(() => {
+    if (!obert || !boto.current) {
+      setPos(null);
+      return;
+    }
+    const col = () => {
+      const r = boto.current?.getBoundingClientRect();
+      if (!r) return;
+      const cap = r.bottom + ALCADA <= window.innerHeight;
+      setPos({
+        left: Math.max(4, Math.min(r.left, window.innerWidth - AMPLADA - 4)),
+        top: cap ? r.bottom + 4 : Math.max(4, r.top - ALCADA - 4),
+      });
+    };
+    col();
+    window.addEventListener("resize", col);
+    window.addEventListener("scroll", col, true);
+    return () => {
+      window.removeEventListener("resize", col);
+      window.removeEventListener("scroll", col, true);
+    };
+  }, [obert]);
 
   // tancar clicant fora, com qualsevol menú
   useEffect(() => {
     if (!obert) return;
     const fora = (e: MouseEvent) => {
-      if (caixa.current && !caixa.current.contains(e.target as Node)) {
-        setObert(false);
-      }
+      const dins =
+        caixa.current?.contains(e.target as Node) ||
+        boto.current?.contains(e.target as Node);
+      if (!dins) setObert(false);
     };
     const escapada = (e: KeyboardEvent) => {
       if (e.key === "Escape") setObert(false);
@@ -101,8 +137,9 @@ export function TrackMenu({
   const tePassos = track.steps.some((c) => c !== 0);
 
   return (
-    <div ref={caixa} className="relative shrink-0">
+    <>
       <button
+        ref={boto}
         type="button"
         aria-label={`Opcions de ${track.name}`}
         aria-expanded={obert}
@@ -113,8 +150,13 @@ export function TrackMenu({
         ⋯
       </button>
 
-      {obert ? (
-        <div className="absolute left-0 top-7 z-40 w-44 rounded-[3px] border border-ink/40 bg-panel-hi p-1 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.5)]">
+      {obert && pos
+        ? createPortal(
+            <div
+              ref={caixa}
+              style={{ left: pos.left, top: pos.top, width: AMPLADA }}
+              className="fixed z-[100] rounded-[3px] border border-ink/40 bg-panel-hi p-1 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.5)]"
+            >
           {reanomenant ? (
             <input
               autoFocus
@@ -205,8 +247,10 @@ export function TrackMenu({
               Elimina
             </Opcio>
           )}
-        </div>
-      ) : null}
-    </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }

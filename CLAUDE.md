@@ -46,23 +46,33 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   servidor i el navegador poden donar l'últim bit diferent a `Math.cos` o `Math.log`, i
   llavors React avisa que l'HTML no coincideix. Ha passat, i el rètol d'error del mode
   `dev` és fàcil de confondre amb un clic fet abans d'hidratar.
-- No tocar la paleta, les tipografies ni el layout de la consola si no ho demanen.
+- No tocar la paleta ni les tipografies si no ho demanen.
+- L'app ocupa el viewport sencer i **no es desplaça mai la pàgina**: el desplaçament és
+  sempre d'una regió. Si afegeixes res a l'arrel, comprova-ho a 2560, 1440 i 1024 px.
 
 ## On va cada cosa
 
 - `src/app/layout.tsx` — `lang="ca"`, fonts i metadades. Cap lògica d'interfície.
-- `src/app/page.tsx` — només munta `<Console/>`. Res de client aquí.
+- `src/app/page.tsx` — només munta `<Workspace/>`. Res de client aquí.
 - `src/app/globals.css` — el `@theme` de Tailwind v4 (paleta, tipografies) i els
   controls lliscants. No hi van utilitats noves ni estils de components.
-- `src/components/Console.tsx` — composició de la consola i les tecles globals
-  (espai, 1–8). Cap crida a Tone.
-- `src/components/Transport.tsx` — play/stop, tempo, swing, llums de compàs. Només
-  presentació: rep valors i callbacks.
-- `src/components/TrackLane.tsx` — una fila: nom, M/S, volum, panoràmic, els dos
-  enviaments, els passos i el vúmetre. Rep un `Track` sencer.
+- `src/components/Workspace.tsx` — l'arrel: una graella de `h-dvh w-screen` amb transport
+  (52 px), centre i panell inferior, els divisors arrossegables, la sincronia de
+  desplaçament entre panells i les tecles globals (espai, 1–8). Cap crida a Tone.
+- `src/components/layout.ts` — les mesures compartides (alçada de fila, buit, alçada de
+  la regla, amplades del panell). **Si les repeteixes a un component, els dos panells es
+  desalineen**: la fila 8 d'una banda ha de caure al mateix píxel que la de l'altra.
+- `src/components/StepRow.tsx` / `StepRuler.tsx` — els setze passos d'una pista i els
+  seus números. Comparteixen classes d'amplada; la regla no en té cap d'escrita a mà.
+- `src/components/TrackRow.tsx` — una fila de la llista de pistes: tot el que no són
+  passos. Alçada idèntica a la d'una fila de la graella.
+- `src/components/Transport.tsx` — títol, play/stop, tempo, swing i llums de compàs, tot
+  en una franja de 52 px. Només presentació: rep valors i callbacks.
 - `src/components/ReturnRows.tsx` — les dues files de retorn, al final de la llista.
 - `src/components/TrackMenu.tsx`, `AddTrack.tsx` — reanomenar, color, duplicar, moure,
-  eliminar i afegir pistes. L'obertura del menú la governa la consola, no cada menú.
+  eliminar i afegir pistes. L'obertura del menú la governa el Workspace, no cada menú, i
+  el menú es dibuixa amb un portal al `body`: dins la fila quedava tallat pel
+  desplaçament del panell.
 - `src/components/Meter.tsx` — la barra de 4 px. Rep el nivell ja llegit.
 - `src/components/StepButton.tsx` — una cel·la i el mapa `FACE` d'aparença per valor.
 - `src/components/SoundPanel.tsx` — el panell de so en tres bandes (cadena, fonts de
