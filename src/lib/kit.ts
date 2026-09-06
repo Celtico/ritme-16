@@ -4,9 +4,29 @@ type ToneModule = typeof import("tone");
 
 export interface DrumKit {
   trigger(id: VoiceId, time: number, velocity: number): void;
-  setVolume(id: VoiceId, db: number): void;
+  /**
+   * `trim` és el retoc de l'usuari en dB, relatiu al nivell propi de la veu:
+   * 0 vol dir "tal com ve de fàbrica", no "a tot drap".
+   */
+  setVolume(id: VoiceId, trim: number): void;
   dispose(): void;
 }
+
+/**
+ * El pes de cada veu dins la barreja. Són els nivells que fan que el conjunt
+ * no passi de 0 dBFS: el MetalSynth de l'aro i el cencerro surt molt calent i
+ * necessita més de 20 dB d'atenuació.
+ */
+const LEVELS: Record<VoiceId, number> = {
+  bombo: -2,
+  caixa: -9,
+  palmada: -10,
+  charles: -16,
+  charlesObert: -18,
+  aro: -22,
+  timbal: -8,
+  cencerro: -24,
+};
 
 /**
  * Totes les veus són sintetitzades en temps real: cap sample, cap fitxer
@@ -22,8 +42,8 @@ export function createKit(Tone: ToneModule): DrumKit {
   }).toDestination();
 
   const channels = {} as Record<VoiceId, InstanceType<ToneModule["Volume"]>>;
-  const bus = (id: VoiceId, db: number) => {
-    const v = new Tone.Volume(db).connect(master);
+  const bus = (id: VoiceId) => {
+    const v = new Tone.Volume(LEVELS[id]).connect(master);
     channels[id] = v;
     return v;
   };
@@ -34,10 +54,10 @@ export function createKit(Tone: ToneModule): DrumKit {
     octaves: 6,
     oscillator: { type: "sine" },
     envelope: { attack: 0.001, decay: 0.42, sustain: 0.008, release: 1.2 },
-  }).connect(bus("bombo", -2));
+  }).connect(bus("bombo"));
 
   // --- Caixa: cos tonal + soroll filtrat --------------------------------
-  const caixaOut = bus("caixa", -9);
+  const caixaOut = bus("caixa");
   const caixaNoise = new Tone.NoiseSynth({
     noise: { type: "white" },
     envelope: { attack: 0.001, decay: 0.17, sustain: 0 },
@@ -49,7 +69,7 @@ export function createKit(Tone: ToneModule): DrumKit {
   }).connect(new Tone.Volume(-8).connect(caixaOut));
 
   // --- Palmada: tres ràfegues curtes + cua ------------------------------
-  const palmadaOut = bus("palmada", -10);
+  const palmadaOut = bus("palmada");
   const palmada = new Tone.NoiseSynth({
     noise: { type: "white" },
     envelope: { attack: 0.001, decay: 0.11, sustain: 0 },
@@ -64,11 +84,11 @@ export function createKit(Tone: ToneModule): DrumKit {
   const charles = new Tone.NoiseSynth({
     noise: { type: "white" },
     envelope: { attack: 0.001, decay: 0.045, sustain: 0 },
-  }).connect(hatFilter().connect(bus("charles", -16)));
+  }).connect(hatFilter().connect(bus("charles")));
   const charlesObert = new Tone.NoiseSynth({
     noise: { type: "white" },
     envelope: { attack: 0.001, decay: 0.38, sustain: 0.02, release: 0.12 },
-  }).connect(hatFilter().connect(bus("charlesObert", -18)));
+  }).connect(hatFilter().connect(bus("charlesObert")));
 
   // --- Aro i cencerro: metàl·lics ---------------------------------------
   const aro = new Tone.MetalSynth({
@@ -77,7 +97,7 @@ export function createKit(Tone: ToneModule): DrumKit {
     modulationIndex: 32,
     resonance: 5200,
     octaves: 1.2,
-  }).connect(bus("aro", -22));
+  }).connect(bus("aro"));
 
   const cencerro = new Tone.MetalSynth({
     envelope: { attack: 0.001, decay: 0.3, release: 0.08 },
@@ -85,7 +105,7 @@ export function createKit(Tone: ToneModule): DrumKit {
     modulationIndex: 16,
     resonance: 900,
     octaves: 0.4,
-  }).connect(bus("cencerro", -24));
+  }).connect(bus("cencerro"));
 
   // --- Timbal greu -------------------------------------------------------
   const timbal = new Tone.MembraneSynth({
@@ -93,7 +113,7 @@ export function createKit(Tone: ToneModule): DrumKit {
     octaves: 3,
     oscillator: { type: "sine" },
     envelope: { attack: 0.001, decay: 0.34, sustain: 0.01, release: 0.6 },
-  }).connect(bus("timbal", -8));
+  }).connect(bus("timbal"));
 
   const triggers: Record<
     VoiceId,
@@ -137,9 +157,9 @@ export function createKit(Tone: ToneModule): DrumKit {
     trigger(id, time, velocity) {
       triggers[id]?.(time, velocity);
     },
-    setVolume(id, db) {
+    setVolume(id, trim) {
       const ch = channels[id];
-      if (ch) ch.volume.value = db;
+      if (ch) ch.volume.value = LEVELS[id] + trim;
     },
     dispose() {
       for (const n of nodes) n.dispose();
