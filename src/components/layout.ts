@@ -16,3 +16,6 @@ export const LIST_MAX = 520;
 /** Alçada per defecte i mínima del panell inferior. */
 export const PANEL_HEIGHT = 320;
 export const PANEL_MIN = 160;
+
+/** Alçada mínima del panell inferior quan hi ha la vista 3D. */
+export const VISUAL_HEIGHT = 460;

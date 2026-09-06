@@ -20,6 +20,7 @@ import {
   LIST_WIDTH,
   PANEL_HEIGHT,
   PANEL_MIN,
+  VISUAL_HEIGHT,
   RULER_HEIGHT,
 } from "./layout";
 import { useMeters } from "@/hooks/useMeters";
@@ -391,14 +392,27 @@ export function Workspace() {
             onDrag={(d) => setPanelHeight((h) => Math.max(PANEL_MIN, h - d))}
           />
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto border-t border-ink/15">
+        <div
+          className={`min-h-0 flex-1 border-t border-ink/15 ${
+            tab === "visual"
+              ? "flex flex-col overflow-hidden"
+              : "overflow-y-auto"
+          }`}
+        >
           <div className="flex gap-1 px-3 pt-2">
             {(["so", "visual"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 aria-pressed={tab === t}
-                onClick={() => setTab(t)}
+                onClick={() => {
+                  setTab(t);
+                  // El cilindre necessita alçada: en obrir la pestanya el
+                  // panell creix un cop, i després mana l'usuari.
+                  if (t === "visual") {
+                    setPanelHeight((h) => Math.max(h, VISUAL_HEIGHT));
+                  }
+                }}
                 className={`px-2 py-1 text-[13px] ${
                   tab === t
                     ? "border-b-2 border-oxblood bg-panel-hi text-ink"
@@ -410,7 +424,9 @@ export function Workspace() {
             ))}
           </div>
           {tab === "visual" ? (
-            <VisualPanel read={visualRead} />
+            <div className="min-h-0 flex-1">
+              <VisualPanel read={visualRead} />
+            </div>
           ) : openTrack ? (
             <SoundPanel
               track={openTrack}
