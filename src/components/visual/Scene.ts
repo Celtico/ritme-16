@@ -35,6 +35,21 @@ const ALT = 0.34;
 /** Els passos buits també es veuen, plans: si no, l'anell no es llegeix. */
 const PLANXA = 0.06;
 const GRUIX = 0.5;
+/** El bloc torna a la mida normal en 120 ms. */
+const RETORN = 0.12;
+
+/**
+ * Com baixa el cop d'una pista: puja de cop amb el vúmetre i torna a zero en
+ * 120 ms. Surt de la classe perquè es pugui provar sense WebGL.
+ */
+export function caiguda(anterior: number, nivell: number, dt: number): number {
+  return Math.max(0, Math.max(nivell, anterior - dt / RETORN));
+}
+
+/** Quant creix el bloc que sona: com a màxim un 30%. */
+export function creixement(sonant: boolean, cop: number): number {
+  return sonant ? 1 + 0.3 * Math.max(0, Math.min(1, cop)) : 1;
+}
 
 /** Llegeix un color de la paleta perquè el 3D no dupliqui cap hex. */
 function paletteColor(name: string, fallback = "#888888"): string {
@@ -139,6 +154,11 @@ export class Scene {
     this.grup.add(this.malla);
   }
 
+  /** Quants blocs s'estan dibuixant. Serveix per comprovar-ho des dels tests. */
+  get instancies(): number {
+    return this.malla?.count ?? 0;
+  }
+
   resize(width: number, height: number): void {
     if (!this.renderer || !this.camera) return;
     this.renderer.setSize(width, height, false);
@@ -204,7 +224,7 @@ export class Scene {
       const pista = pistes[f];
       // El vúmetre puja de cop i baixa sol: el retorn dura 120 ms.
       const nivell = Math.max(0, Math.min(1, state.levels[pista.id] ?? 0));
-      const cop = Math.max(nivell, (this.cops.get(pista.id) ?? 0) - dt / 0.12);
+      const cop = caiguda(this.cops.get(pista.id) ?? 0, nivell, dt);
       this.cops.set(pista.id, cop);
 
       const y = base + f * SEPARACIO;
@@ -221,8 +241,10 @@ export class Scene {
         const accent = cella === 2;
         const alt = cella === 0 ? PLANXA : accent ? ALT * 1.75 : ALT;
         // Només creix el bloc que sona ara, i només si hi ha res al pas.
-        const creix =
-          cella !== 0 && i === pasActual && state.playing ? 1 + 0.3 * cop : 1;
+        const creix = creixement(
+          cella !== 0 && i === pasActual && state.playing,
+          cop,
+        );
 
         tmp.pos.set(
           Math.sin(angle) * RADI,

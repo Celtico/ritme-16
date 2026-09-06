@@ -113,6 +113,19 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   sota i valor només al globus mentre s'arrossega, mai fix.
 - `src/components/FilterDisplay.tsx`, `ModStrip.tsx`, `Macros.tsx` — les peces del panell.
 - `src/components/PatternBank.tsx` — presets, sortejar, buidar i el desat al navegador.
+- `src/components/visual/Scene.ts` — la vista 3D. **Cap línia de React a dins**: rep un
+  canvas, l'inicialitza amb un `import("three")` dinàmic i s'actualitza amb un objecte
+  d'estat. Els colors i les llums surten de les variables CSS de la paleta amb
+  `getComputedStyle`; no n'hi ha cap d'escrit a mà. Tots els blocs són una sola
+  `InstancedMesh` amb les 512 instàncies (32 passos × 16 pistes) reservades d'entrada:
+  canviar de ranura, de llargada o de pista només reescriu matrius.
+- `src/components/visual/VisualPanel.tsx` — només munta el canvas i mou el bucle. El
+  bucle s'atura quan el panell no es veu, quan la finestra perd el focus i amb
+  `prefers-reduced-motion`, que passa a dibuixar un sol fotograma per canvi de pas.
+- `src/components/visual/useVisualSource.ts` — el pont amb el seqüenciador. Torna una
+  **funció**, no un estat: el bucle de dibuix hi va a buscar les dades i així no fa
+  tornar a pintar React seixanta cops per segon. Els nivells són els dels `Tone.Meter`
+  que ja hi ha; el 3D no afegeix cap node al graf d'àudio.
 - `src/hooks/useSequencer.ts` — tot l'estat del patró i tot Tone: transport, seqüència,
   edicions. Cap component no ha de tocar Tone pel seu compte.
 - `src/hooks/useMeters.ts` — **un sol** bucle de dibuix per a tots els vúmetres. Ni se
