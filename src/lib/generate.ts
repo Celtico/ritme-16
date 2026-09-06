@@ -61,6 +61,8 @@ export interface StyleSpec {
   rules: Array<(p: Pattern, rng: Rng) => void>;
   sound?: Partial<Record<VoiceKind, (rng: Rng) => Partial<VoiceParams>>>;
   mix?: Partial<Record<VoiceKind, (rng: Rng) => Partial<ChannelMix>>>;
+  /** Com de tolerant és el crític amb les veus del mateix registre. */
+  overlapLimit?: number;
 }
 
 export interface Generated {
@@ -279,7 +281,7 @@ export function generate(style: StyleSpec, seed: number): Generated {
   for (let intent = 0; intent < MAX_ATTEMPTS; intent++) {
     const llavor = seed + intent;
     const song = buildSong(style, mulberry32(llavor));
-    const verdict = critique(song);
+    const verdict = critique(song, { overlapLimit: style.overlapLimit });
     const candidat = { song, seed: llavor, verdict, attempts: intent + 1 };
     if (verdict.score >= PASS_MARK) return candidat;
     if (!millor || verdict.score > millor.verdict.score) millor = candidat;

@@ -291,6 +291,8 @@ export const STYLES: StyleSpec[] = [
   {
     id: "ternari",
     name: "Ternari",
+    // el més dens de tots: qualsevol solapament s'hi nota molt més
+    overlapLimit: 0.25,
     bpm: [120, 138],
     swing: [0.5, 0.62],
     modes: ["minor", "dorian", "pentMin"],
@@ -336,6 +338,8 @@ export const STYLES: StyleSpec[] = [
   {
     id: "percussio",
     name: "Percussió",
+    // sis veus percussives conviuen: aquí solapar-se una mica és normal
+    overlapLimit: 0.5,
     bpm: [100, 118],
     swing: [0, 0.25],
     modes: ["minor"],
@@ -355,13 +359,24 @@ export const STYLES: StyleSpec[] = [
     rules: [
       // que sempre hi hagi un ancoratge al primer temps
       (p) => afegeixA(p, "bombo", [0], 2),
-      // i que el cencerro no vagi mai clavat amb l'aro
-      (p, rng: Rng) => {
-        const a = veu(p, "aro");
-        const c = veu(p, "cencerro");
-        if (!a || !c) return;
-        for (let i = 0; i < p.length; i++) {
-          if (a.steps[i] && c.steps[i] && chance(rng, 0.8)) c.steps[i] = 0;
+      // Cap parell de veus del mateix registre no va clavat: dues veus
+      // metàl·liques, o dues de mitges, sonen com una de sola i més forta, i
+      // amb sis veus a la vegada això passava tota l'estona. Es fa sempre i
+      // no per sorteig: amb el 80 % en quedaven prou per no passar ni el
+      // llindar del propi estil.
+      (p) => {
+        const parells: [VoiceKind, VoiceKind][] = [
+          ["aro", "cencerro"],
+          ["caixa", "palmada"],
+          ["bombo", "timbal"],
+        ];
+        for (const [a, b] of parells) {
+          const ta = veu(p, a);
+          const tb = veu(p, b);
+          if (!ta || !tb) continue;
+          for (let i = 0; i < p.length; i++) {
+            if (ta.steps[i] && tb.steps[i]) tb.steps[i] = 0;
+          }
         }
       },
       // És l'estil amb més veus (5,65) i totes pesaven gairebé igual: la més
@@ -378,9 +393,21 @@ export const STYLES: StyleSpec[] = [
         const ordenades = [...amb].sort((x, y) => cops(y) - cops(x));
         const lider = ordenades[0];
         const mediana = cops(ordenades[Math.floor(ordenades.length / 2)]);
-        // s'afegeixen cops a la líder als passos que li queden lliures
+        // no s'hi posen cops on ja n'hi ha del seu parell de registre: si no,
+        // aquesta regla desfaria la que els separa, depengui de l'ordre
+        const parella: Partial<Record<VoiceKind, VoiceKind>> = {
+          aro: "cencerro",
+          cencerro: "aro",
+          caixa: "palmada",
+          palmada: "caixa",
+          bombo: "timbal",
+          timbal: "bombo",
+        };
+        const altre = parella[lider.kind]
+          ? veu(p, parella[lider.kind]!)
+          : undefined;
         for (let i = 0; i < p.length && cops(lider) < mediana * 2; i++) {
-          if (!lider.steps[i]) lider.steps[i] = 1;
+          if (!lider.steps[i] && !altre?.steps[i]) lider.steps[i] = 1;
         }
       },
     ],

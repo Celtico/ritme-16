@@ -69,9 +69,22 @@ describe("determinisme del generador", () => {
   });
 
   it("llavors diferents donen cançons diferents", () => {
-    const a = JSON.stringify(generate(PROVA, 1).song);
-    const b = JSON.stringify(generate(PROVA, 2).song);
-    expect(a).not.toBe(b);
+    // dues llavors poden donar el mateix si el crític n'ha redirigit una cap
+    // a l'altra; el que no pot passar és que totes acabin igual
+    const distintes = new Set(
+      Array.from({ length: 12 }, (_, i) =>
+        JSON.stringify(generate(PROVA, i + 1).song),
+      ),
+    );
+    expect(distintes.size).toBeGreaterThan(6);
+  });
+
+  it("dues llavors que no s'han redirigit donen cançons diferents", () => {
+    const a = generate(PROVA, 3);
+    const b = generate(PROVA, 20);
+    if (a.seed !== b.seed) {
+      expect(JSON.stringify(a.song)).not.toBe(JSON.stringify(b.song));
+    }
   });
 });
 
@@ -174,13 +187,13 @@ describe("el crític", () => {
     expect(v.issues.join(" ")).toContain("cap ranura amb contingut");
   });
 
-  it("es queixa si dues veus del mateix registre van sempre juntes", () => {
+  it("es queixa si dues veus del mateix registre se solapen massa", () => {
     const { song } = generate(PROVA, 1);
     const p = song.slots[0].pattern;
     const charles = p.tracks.find((t) => t.kind === "charles")!;
     const obert = p.tracks.find((t) => t.kind === "charlesObert")!;
     charles.steps = charles.steps.map((_, i) => (i % 4 === 0 ? 1 : 0));
     obert.steps = obert.steps.map((_, i) => (i % 4 === 0 ? 1 : 0));
-    expect(critique(song).issues.join(" ")).toContain("sempre juntes");
+    expect(critique(song).issues.join(" ")).toContain("coincideixen al 100 %");
   });
 });

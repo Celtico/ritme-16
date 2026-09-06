@@ -47,25 +47,46 @@ const REGISTRES: VoiceKind[][] = [
   ["aro", "cencerro"],
 ];
 
+/** Quant es poden solapar dues veus del mateix registre, per defecte. */
+export const DEFAULT_OVERLAP_LIMIT = 0.4;
+
+export interface CriticOptions {
+  /**
+   * Fracció màxima de cops de la veu menys densa que poden coincidir amb
+   * l'altra del seu registre. Va per estil: al ternari, que és el més dens,
+   * qualsevol solapament es nota molt més que a la percussió.
+   */
+  overlapLimit?: number;
+}
+
 /**
- * Dues veus del mateix registre que caiguin sempre juntes sonen com una de
- * sola i més forta: no aporten res i es mengen espai.
+ * Dues veus del mateix registre que caiguin sovint juntes sonen com una de
+ * sola i més forta. Es mesura contra la menys densa: si una veu de tres cops
+ * en fa dos sobre l'altra, ha desaparegut, encara que per a l'altra siguin
+ * dos de vint.
  */
-function registreSolapat(p: Pattern): string[] {
+function registreSolapat(p: Pattern, limit: number): string[] {
   const problemes: string[] = [];
   for (const [a, b] of REGISTRES) {
     const ta = p.tracks.find((t) => t.kind === a);
     const tb = p.tracks.find((t) => t.kind === b);
     if (!ta || !tb) continue;
     let juntes = 0;
-    let deB = 0;
+    let copsA = 0;
+    let copsB = 0;
     for (let i = 0; i < p.length; i++) {
-      if (tb.steps[i]) {
-        deB++;
-        if (ta.steps[i]) juntes++;
-      }
+      if (ta.steps[i]) copsA++;
+      if (tb.steps[i]) copsB++;
+      if (ta.steps[i] && tb.steps[i]) juntes++;
     }
-    if (deB >= 2 && juntes === deB) problemes.push(`${a} i ${b} sempre juntes`);
+    const menys = Math.min(copsA, copsB);
+    if (menys < 2) continue;
+    const fraccio = juntes / menys;
+    if (fraccio > limit) {
+      problemes.push(
+        `${a} i ${b} coincideixen al ${Math.round(fraccio * 100)} % dels cops`,
+      );
+    }
   }
   return problemes;
 }
@@ -82,7 +103,8 @@ export function distance(a: Pattern, b: Pattern): number {
   return d;
 }
 
-export function critique(song: Song): Verdict {
+export function critique(song: Song, options: CriticOptions = {}): Verdict {
+  const limit = options.overlapLimit ?? DEFAULT_OVERLAP_LIMIT;
   const issues: string[] = [];
   const plenes = song.slots.filter((s) => !isEmptyPattern(s.pattern));
   if (plenes.length < 3) issues.push("menys de tres ranures amb contingut");
@@ -96,7 +118,7 @@ export function critique(song: Song): Verdict {
     if (d < 8) issues.push(`"${p.name}" massa buit (${d.toFixed(1)} per compàs)`);
     if (d > 46) issues.push(`"${p.name}" saturat (${d.toFixed(1)} per compàs)`);
     if (emptySteps(p) < 1) issues.push(`"${p.name}" no té cap pas lliure`);
-    issues.push(...registreSolapat(p).map((x) => `"${p.name}": ${x}`));
+    issues.push(...registreSolapat(p, limit).map((x) => `"${p.name}": ${x}`));
   }
 
   // les variacions han de ser variacions: ni idèntiques ni una altra cançó
@@ -123,6 +145,6 @@ export function critique(song: Song): Verdict {
   return { score: +(1 - penalitzacio).toFixed(2), issues };
 }
 
-export function passes(song: Song): boolean {
-  return critique(song).score >= PASS_MARK;
+export function passes(song: Song, options?: CriticOptions): boolean {
+  return critique(song, options).score >= PASS_MARK;
 }
