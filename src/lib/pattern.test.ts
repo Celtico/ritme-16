@@ -32,7 +32,7 @@ describe("model del patró", () => {
       for (const t of p.tracks) {
         expect(t.steps, `${p.name} / ${t.id}`).toHaveLength(MAX_STEPS);
       }
-      expect(p.length, p.name).toBe(16);
+      expect(PATTERN_LENGTHS, p.name).toContain(p.length);
     }
   });
 
@@ -288,14 +288,15 @@ describe("baix i acords dels presets", () => {
 
   it("posa notes de baix i acords a tots els presets", () => {
     for (const p of PRESETS) {
+      // com a mínim una nota per compàs de baix, i un acord
       expect(
         melodica(p, "baix").bass!.filter(Boolean).length,
         p.name,
-      ).toBeGreaterThan(3);
+      ).toBeGreaterThanOrEqual(2);
       expect(
         melodica(p, "acords").chords!.filter(Boolean).length,
         p.name,
-      ).toBeGreaterThan(1);
+      ).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -342,7 +343,9 @@ describe("baix i acords dels presets", () => {
         if (!c) continue;
         expect(c.degree, p.name).toBeGreaterThanOrEqual(1);
         expect(c.degree, p.name).toBeLessThanOrEqual(7);
-        expect(degreeToChord(p.key, c.degree, c.kind), p.name).toHaveLength(3);
+        expect(degreeToChord(p.key, c.degree, c.kind), p.name).toHaveLength(
+          c.kind === "seventh" ? 4 : 3,
+        );
       }
     }
   });
@@ -354,6 +357,28 @@ describe("baix i acords dels presets", () => {
       const nota = melodica(p, "baix").bass![0];
       expect(nota, p.name).not.toBeNull();
       expect(nota!.midi % 12, p.name).toBe(p.key.root);
+    }
+  });
+
+  it("no deixa cap pas actiu més enllà de la llargada del patró", () => {
+    for (const p of PRESETS) {
+      for (const t of p.tracks) {
+        for (let i = p.length; i < t.steps.length; i++) {
+          expect(t.steps[i], `${p.name} / ${t.id} / pas ${i}`).toBe(0);
+        }
+        for (const fila of [t.bass, t.chords]) {
+          for (let i = p.length; i < (fila?.length ?? 0); i++) {
+            expect(fila![i], `${p.name} / ${t.id} / pas ${i}`).toBeNull();
+          }
+        }
+      }
+    }
+  });
+
+  it("cobreix les tres llargades amb algun exemple", () => {
+    const llargades = new Set(PRESETS.map((p) => p.length));
+    for (const n of PATTERN_LENGTHS) {
+      expect(llargades, `cap preset de ${n} passos`).toContain(n);
     }
   });
 

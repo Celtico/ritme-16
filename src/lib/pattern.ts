@@ -477,21 +477,27 @@ export function lane(spec: string): Cell[] {
 
 /** [pas, MIDI, llargada] — el baix, en notes absolutes. */
 type BassSpec = [number, number, number][];
-/** [pas, grau, llargada, octava] — els acords, en graus de la tonalitat. */
-type ChordSpec = [number, number, number, -1 | 0 | 1][];
+/** [pas, grau, llargada, octava, sèptima?] — els acords, en graus. */
+type ChordSpec = [number, number, number, -1 | 0 | 1, boolean?][];
+
+interface BuildOptions {
+  key?: Key;
+  length?: PatternLength;
+  bass?: BassSpec;
+  chords?: ChordSpec;
+}
 
 function build(
   name: string,
   bpm: number,
   swing: number,
   lanes: Partial<Record<VoiceKind, string>>,
-  key: Key = DEFAULT_KEY,
-  bass: BassSpec = [],
-  chords: ChordSpec = [],
+  { key = DEFAULT_KEY, length = 16, bass = [], chords = [] }: BuildOptions = {},
 ): Pattern {
   const p = emptyPattern(name);
   p.bpm = bpm;
   p.swing = swing;
+  p.length = length;
   p.key = { ...key };
   for (const [kind, spec] of Object.entries(lanes)) {
     const track = p.tracks.find((t) => t.kind === (kind as VoiceKind));
@@ -505,8 +511,13 @@ function build(
   }
   const acords = p.tracks.find((t) => t.kind === "acords");
   if (acords?.chords) {
-    for (const [i, degree, length, octave] of chords) {
-      acords.chords[i] = { degree, kind: "triad", length, octave };
+    for (const [i, degree, len, octave, seventh] of chords) {
+      acords.chords[i] = {
+        degree,
+        kind: seventh ? "seventh" : "triad",
+        length: len,
+        octave,
+      };
     }
   }
   return p;
@@ -520,9 +531,15 @@ const RE3 = 50;
 const MI3 = 52;
 const FA2 = 41;
 const SOL2 = 43;
+const MI2 = 40;
+const DO2 = 36;
+const RE2 = 38;
 
 const LA_MENOR: Key = { root: 9, mode: "minor" };
 const RE_DORIC: Key = { root: 2, mode: "dorian" };
+const MI_MENOR: Key = { root: 4, mode: "minor" };
+const SOL_MIXOLIDI: Key = { root: 7, mode: "mixolydian" };
+const DO_MAJOR: Key = { root: 0, mode: "major" };
 
 export const PRESETS: Pattern[] = [
   // i - VI - III - VII a la menor, amb el baix fent fonamental i quinta
@@ -536,8 +553,7 @@ export const PRESETS: Pattern[] = [
       palmada: "....X.......X...",
       charlesObert: "............x...",
     },
-    LA_MENOR,
-    [
+    { key: LA_MENOR, bass: [
       [0, LA2, 2],
       [2, MI3, 2],
       [4, FA2, 2],
@@ -546,13 +562,12 @@ export const PRESETS: Pattern[] = [
       [10, SOL2, 2],
       [12, SOL2, 2],
       [14, RE3, 2],
-    ],
-    [
+    ], chords: [
       [0, 1, 4, 0],
       [4, 6, 4, 0],
       [8, 3, 4, 0],
       [12, 7, 4, 0],
-    ],
+    ] },
   ),
   // i - IV a re dòric: el IV major és el que fa que soni dòric i no menor
   build(
@@ -565,19 +580,17 @@ export const PRESETS: Pattern[] = [
       charles: "x.x.x.x.x.x.xxx.",
       aro: "..x........x....",
     },
-    RE_DORIC,
-    [
+    { key: RE_DORIC, bass: [
       [0, RE3 - 12, 3],
       [3, RE3 - 12, 1],
       [6, DO3, 2],
       [8, SOL2, 3],
       [11, SI2, 1],
       [14, DO3, 2],
-    ],
-    [
+    ], chords: [
       [0, 1, 8, 0],
       [8, 4, 8, 0],
-    ],
+    ] },
   ),
   // dos acords llargs i un baix que amb prou feines es mou
   build(
@@ -591,16 +604,186 @@ export const PRESETS: Pattern[] = [
       cencerro: "........x.......",
       timbal: "..............x.",
     },
-    LA_MENOR,
-    [
+    { key: LA_MENOR, bass: [
       [0, LA2, 4],
       [6, DO3, 2],
       [8, FA2, 4],
       [14, DO3, 2],
-    ],
-    [
+    ], chords: [
       [0, 1, 8, 0],
       [8, 6, 8, 0],
-    ],
+    ] },
+  ),
+
+  // --- vuit passos: bucles curts, mig compàs -----------------------------
+  build(
+    "Batec",
+    140,
+    0,
+    {
+      bombo: "X...x...",
+      charles: ".x.x.x.x",
+      palmada: "....X...",
+    },
+    {
+      key: LA_MENOR,
+      length: 8,
+      bass: [
+        [0, LA2, 4],
+        [4, MI2, 4],
+      ],
+      chords: [[0, 1, 8, 0]],
+    },
+  ),
+  build(
+    "Rebot",
+    96,
+    0.42,
+    {
+      bombo: "X..x....",
+      caixa: "....X...",
+      charles: "x.x.x.xx",
+      aro: "......x.",
+    },
+    {
+      key: MI_MENOR,
+      length: 8,
+      bass: [
+        [0, MI2, 3],
+        [4, SI2, 2],
+      ],
+      chords: [[0, 1, 8, 0]],
+    },
+  ),
+
+  // --- setze passos ------------------------------------------------------
+  build(
+    "Vidre",
+    132,
+    0,
+    {
+      bombo: "X...X...X...X...",
+      charles: "x.x.x.x.x.x.x.x.",
+      cencerro: "..x.......x.....",
+      aro: "......x.......x.",
+    },
+    {
+      key: SOL_MIXOLIDI,
+      bass: [
+        [0, SOL2, 2],
+        [2, RE3, 2],
+        [4, SOL2, 2],
+        [6, FA2, 2],
+        [8, DO3, 2],
+        [10, RE3, 2],
+        [12, SOL2, 2],
+        [14, RE3, 2],
+      ],
+      // I - VII - IV - I, que és el que fa que soni mixolidi i no major
+      chords: [
+        [0, 1, 4, 0],
+        [4, 7, 4, 0],
+        [8, 4, 4, 0],
+        [12, 1, 4, 0],
+      ],
+    },
+  ),
+
+  // --- trenta-dos passos: dos compassos ----------------------------------
+  build(
+    "Cinta magnètica",
+    118,
+    0.16,
+    {
+      bombo: "X...x...X...x...X...x...X..x....",
+      charles: "..x...x...x...x...x...x...x...x.",
+      palmada: "....X.......X.......X.......X..x",
+      charlesObert: "............x...............x...",
+    },
+    {
+      key: LA_MENOR,
+      length: 32,
+      bass: [
+        [0, LA2, 4],
+        [4, LA2, 2],
+        [6, MI3, 2],
+        [8, FA2, 4],
+        [12, DO3, 4],
+        [16, DO3, 4],
+        [20, SOL2, 4],
+        [24, SOL2, 4],
+        [28, RE3, 4],
+      ],
+      chords: [
+        [0, 1, 8, 0],
+        [8, 6, 8, 0],
+        [16, 3, 8, 0],
+        [24, 7, 8, 0],
+      ],
+    },
+  ),
+  build(
+    "Serpentí",
+    92,
+    0.28,
+    {
+      bombo: "X.....x..X......X.....x..X...x..",
+      caixa: "....X.......X.......X.......X..x",
+      charles: "x.x.x.x.x.x.xxx.x.x.x.x.x.x.xxx.",
+      aro: "..x........x......x........x....",
+    },
+    {
+      key: RE_DORIC,
+      length: 32,
+      bass: [
+        [0, RE2, 3],
+        [3, RE2, 1],
+        [6, DO3, 2],
+        [8, SOL2, 3],
+        [11, SI2, 1],
+        [14, DO3, 2],
+        [16, RE2, 3],
+        [19, RE2, 1],
+        [22, LA2, 2],
+        [24, FA2, 3],
+        [27, SOL2, 1],
+        [30, DO3, 2],
+      ],
+      chords: [
+        [0, 1, 8, 0],
+        [8, 4, 8, 0],
+        [16, 1, 8, 0],
+        [24, 7, 8, 0],
+      ],
+    },
+  ),
+  build(
+    "Boira",
+    72,
+    0.1,
+    {
+      bombo: "X.......x.......X.......x.......",
+      caixa: "....X.......X.......X.......X..x",
+      charles: "x...x...x...x...x...x...x...x...",
+      timbal: "..............x...............x.",
+      cencerro: "................................",
+    },
+    {
+      key: DO_MAJOR,
+      length: 32,
+      bass: [
+        [0, DO2, 4],
+        [8, LA2, 4],
+        [16, FA2, 4],
+        [24, SOL2, 4],
+      ],
+      // amb sèptimes, que és el que li dona l'aire de boira
+      chords: [
+        [0, 1, 8, 0, true],
+        [8, 6, 8, 0, true],
+        [16, 4, 8, 0, true],
+        [24, 5, 8, 0, true],
+      ],
+    },
   ),
 ];
