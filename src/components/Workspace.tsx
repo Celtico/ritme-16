@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AddTrack } from "./AddTrack";
 import { PatternBank } from "./PatternBank";
 import { ReturnRows } from "./ReturnRows";
+import { SlotBank } from "./SlotBank";
 import { SoundPanel } from "./SoundPanel";
 import { MelodyRow } from "./MelodyRow";
 import { StepRow } from "./StepRow";
@@ -156,7 +157,10 @@ export function Workspace() {
   return (
     <div
       className="grid h-dvh w-screen overflow-hidden bg-panel text-ink"
-      style={{ gridTemplateRows: "52px 1fr auto", gridTemplateColumns: "1fr" }}
+      style={{
+        gridTemplateRows: "52px auto 1fr auto",
+        gridTemplateColumns: "1fr",
+      }}
     >
       <Transport
         theme={theme}
@@ -174,6 +178,14 @@ export function Workspace() {
         onToggle={seq.toggleTransport}
         onBpm={seq.setBpm}
         onSwing={seq.setSwing}
+      />
+
+      <SlotBank
+        song={seq.song}
+        onSelect={seq.selectSlot}
+        onFollow={seq.setFollow}
+        onCopy={seq.copySlot}
+        onClear={seq.clearSlot}
       />
 
       {/* centre: passos a l'esquerra, llista de pistes a la dreta */}

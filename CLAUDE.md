@@ -36,6 +36,11 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   16 pistes, i mai cap patró sense pistes.
 - Les files guarden sempre `MAX_STEPS` (32) cel·les; `pattern.length` diu quantes en
   sonen. Escurçar un patró no esborra res.
+- **La font de veritat de la cançó és `songRef`, no l'estat de React.** El fil d'àudio hi
+  escriu el canvi de ranura i el pas següent l'ha de veure ja fet; l'estat hi va al
+  darrere només per dibuixar. Tota mutació passa per `commitSong()`.
+- La `Tone.Sequence` és un rellotge fix de 32 setzens i el patró s'hi enrotlla amb un
+  mòdul. Ni la llargada ni el canvi de ranura reprogramen mai res.
 - El patró és una llista de pistes (`Pattern.tracks`), no registres indexats per veu.
   L'ordre de l'array és l'ordre visual i `track.id` és el que lliga la pista amb la seva
   cadena de síntesi.
@@ -123,6 +128,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   comparteixen el transport en directe i l'exportació**; si cadascú tingués la seva
   còpia, el WAV acabaria sonant diferent del que se sent.
 - `src/lib/render.ts` — el renderitzat fora de línia amb `Tone.Offline`.
+- `src/lib/song.ts` — el banc de vuit ranures i les follow actions. `resolveFollow()` és
+  pura i rep el generador d'atzar per paràmetre, per poder-la provar dues vegades igual.
+- `src/components/SlotBank.tsx` — la fila A–H amb l'acció i el copia/enganxa.
 - `src/lib/share.ts` — el patró dins d'un paràmetre d'adreça. Sense cap API del
   navegador (ni `btoa`, ni `Buffer`), perquè el còdec es pugui provar sencer i doni el
   mateix a tot arreu. En descodificar passa sempre per `normalise`.
@@ -165,5 +173,7 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   més la cua), estèreo a 48 kHz, capçal correcte, pic 0,845 i cap finestra muda.
 - Compartir per URL verificat de punta a punta: es genera l'enllaç, s'obre en una càrrega
   neta i tornen els passos, els accents, el baix, la tonalitat, la llargada i el tempo.
-- Pendent, no fet: el banc de 8 patrons amb follow actions i les escenes.
+- El banc A–H està verificat sonant: 76 passos observats sense cap salt irregular, tots
+  els canvis de ranura al pas 15, i cap silenci més llarg que el que hi ha entre bombos.
+- Pendent, no fet: les escenes.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

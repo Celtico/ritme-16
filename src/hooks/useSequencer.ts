@@ -4,6 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
 import { renderPattern } from "@/lib/render";
 import {
+  cloneSong,
+  currentPattern,
+  emptySong,
+  SLOT_NAMES,
+  resolveFollow,
+  type FollowAction,
+  type Song,
+} from "@/lib/song";
+import {
   ACCENT_VELOCITY,
   applyTracks,
   triggerStep,
@@ -16,10 +25,11 @@ import {
   clonePattern,
   duplicateTrack as duplicate,
   emptyLane,
+  emptyPattern,
   KINDS,
+  MAX_STEPS,
   placeNote,
   moveTrack as move,
-  PRESETS,
   removeTrack as remove,
   type BassNote,
   type Cell,
@@ -42,9 +52,14 @@ type StepSequence = import("tone").Sequence<number>;
 
 
 export function useSequencer() {
-  const [pattern, setPattern] = useState<Pattern>(() =>
-    clonePattern(PRESETS[0]),
-  );
+  /**
+   * La font de veritat és la ref, no l'estat: el fil d'àudio hi ha d'escriure
+   * el canvi de ranura i el pas següent l'ha de veure ja fet. L'estat només
+   * hi va al darrere per poder dibuixar.
+   */
+  const songRef = useRef<Song>(emptySong());
+  const [song, setSong] = useState<Song>(songRef.current);
+  const pattern = currentPattern(song);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
   const [audioReady, setAudioReady] = useState(false);
@@ -52,11 +67,28 @@ export function useSequencer() {
   const toneRef = useRef<ToneModule | null>(null);
   const kitRef = useRef<DrumKit | null>(null);
   const seqRef = useRef<StepSequence | null>(null);
-  const patternRef = useRef(pattern);
+  const commitSong = useCallback((updater: (s: Song) => Song) => {
+    const next = updater(songRef.current);
+    songRef.current = next;
+    setSong(next);
+  }, []);
 
-  useEffect(() => {
-    patternRef.current = pattern;
-  }, [pattern]);
+  /** Reescriu el patró de la ranura que sona. */
+  const setPattern = useCallback(
+    (updater: (p: Pattern) => Pattern) =>
+      commitSong((s) => {
+        const next = cloneSong(s);
+        next.slots[next.current].pattern = updater(
+          next.slots[next.current].pattern,
+        );
+        return next;
+      }),
+    [commitSong],
+  );
+
+  /** Compassos comptats des que sona, i quan es va canviar de ranura. */
+  const barsRef = useRef(0);
+  const lastSwitchRef = useRef(0);
 
   /** Carrega Tone només al client i només després d'un gest de l'usuari. */
   const ensureAudio = useCallback(async () => {
@@ -69,7 +101,7 @@ export function useSequencer() {
       kitRef.current = createKit(Tone);
     }
     // les pistes poden haver canviat des de l'últim cop
-    applyTracks(kitRef.current, patternRef.current);
+    applyTracks(kitRef.current, currentPattern(songRef.current));
     setAudioReady(true);
     return { Tone, kit: kitRef.current };
   }, []);
@@ -77,25 +109,42 @@ export function useSequencer() {
   const start = useCallback(async () => {
     const { Tone, kit } = await ensureAudio();
     const transport = Tone.getTransport();
-    transport.bpm.value = patternRef.current.bpm;
-    transport.swing = patternRef.current.swing;
+    transport.bpm.value = currentPattern(songRef.current).bpm;
+    transport.swing = currentPattern(songRef.current).swing;
     transport.swingSubdivision = "16n";
 
     if (!seqRef.current) {
-      const indices = Array.from(
-        { length: patternRef.current.length },
-        (_, i) => i,
-      );
+      // Un rellotge fix de MAX_STEPS setzens. El patró s'hi enrotlla amb un
+      // mòdul, o sigui que canviar de llargada o de ranura no reprograma res.
+      const indices = Array.from({ length: MAX_STEPS }, (_, i) => i);
       seqRef.current = new Tone.Sequence(
         (time, step) => {
-          triggerStep(
-            kit,
-            patternRef.current,
-            step,
-            time,
-            Tone.Time("16n").toSeconds(),
-          );
-          Tone.getDraw().schedule(() => setCurrentStep(step), time);
+          const s = songRef.current;
+          const p = currentPattern(s);
+          const i = step % p.length;
+
+          triggerStep(kit, p, i, time, Tone.Time("16n").toSeconds());
+
+          // un compàs són setze setzens del rellotge
+          if (step % 16 === 15) barsRef.current += 1;
+
+          // La decisió es pren al darrer pas del patró, dins del callback:
+          // escrivint la ref, el pas 0 que ve tot seguit ja llegeix la
+          // ranura nova i no hi ha cap forat.
+          if (i === p.length - 1) {
+            const { every } = s.slots[s.current].follow;
+            if (barsRef.current - lastSwitchRef.current >= every) {
+              lastSwitchRef.current = barsRef.current;
+              const seguent = resolveFollow(s, s.current);
+              if (seguent !== s.current) {
+                const nova = { ...s, current: seguent };
+                songRef.current = nova;
+                Tone.getDraw().schedule(() => setSong(nova), time);
+              }
+            }
+          }
+
+          Tone.getDraw().schedule(() => setCurrentStep(i), time);
         },
         indices,
         "16n",
@@ -107,6 +156,8 @@ export function useSequencer() {
   }, [ensureAudio]);
 
   const stop = useCallback(() => {
+    barsRef.current = 0;
+    lastSwitchRef.current = 0;
     const Tone = toneRef.current;
     if (Tone) {
       Tone.getTransport().stop();
@@ -130,7 +181,7 @@ export function useSequencer() {
       kitRef.current = null;
       toneRef.current?.getTransport().stop();
     };
-  }, []);
+  }, [setPattern]);
 
   // El transport llegeix aquests valors en directe
   useEffect(() => {
@@ -140,17 +191,6 @@ export function useSequencer() {
     Tone.getTransport().swing = pattern.swing;
   }, [pattern.bpm, pattern.swing]);
 
-  /**
-   * La llargada es canvia escrivint els events de la seqüència, no refent-la:
-   * recrear-la mentre sona perdria el lloc del transport.
-   */
-  useEffect(() => {
-    const seq = seqRef.current;
-    if (!seq) return;
-    if (seq.events.length !== pattern.length) {
-      seq.events = Array.from({ length: pattern.length }, (_, i) => i);
-    }
-  }, [pattern.length]);
 
   // --- Edició -----------------------------------------------------------
 
@@ -165,7 +205,7 @@ export function useSequencer() {
         return next;
       });
     },
-    [],
+    [setPattern],
   );
 
   const toggleStep = useCallback(
@@ -191,7 +231,7 @@ export function useSequencer() {
 
   const setChannel = useCallback(
     (id: string, changes: Partial<ChannelMix>) => {
-      const previ = patternRef.current.tracks.find((t) => t.id === id);
+      const previ = currentPattern(songRef.current).tracks.find((t) => t.id === id);
       if (!previ) return;
       const mix = { ...previ.mix, ...changes };
       // el kit ho ha de sentir ara, no al proper render
@@ -203,10 +243,10 @@ export function useSequencer() {
   );
 
   const setReturns = useCallback((changes: Partial<Returns>) => {
-    const next = { ...patternRef.current.returns, ...changes };
+    const next = { ...currentPattern(songRef.current).returns, ...changes };
     kitRef.current?.setReturns(next);
     setPattern((prev) => ({ ...clonePattern(prev), returns: next }));
-  }, []);
+  }, [setPattern]);
 
   /** El bucle de dibuix dels vúmetres els llegeix tots d'un sol cop. */
   const readLevels = useCallback((): TrackLevels | null => {
@@ -216,7 +256,7 @@ export function useSequencer() {
   const setSound = useCallback(
     (id: string, changes: Partial<VoiceParams>) => {
       // el kit ha de sentir el canvi ara, no al proper render
-      const previ = patternRef.current.tracks.find((t) => t.id === id);
+      const previ = currentPattern(songRef.current).tracks.find((t) => t.id === id);
       if (!previ) return;
       const next = { ...previ.sound, ...changes };
       kitRef.current?.setParams(id, next);
@@ -228,7 +268,7 @@ export function useSequencer() {
   /** Moure un macro escriu els paràmetres de totes les seves destinacions. */
   const setMacro = useCallback(
     (index: number, changes: Partial<Macro>) => {
-      const prev = patternRef.current;
+      const prev = currentPattern(songRef.current);
       const anterior = prev.macros[index];
       if (!anterior) return;
       const macro = { ...anterior, ...changes };
@@ -240,9 +280,9 @@ export function useSequencer() {
         t.sound = applyMacroAssignment(t, a, macro.value);
         kitRef.current?.setParams(t.id, t.sound);
       }
-      setPattern(next);
+      setPattern(() => next);
     },
-    [],
+    [setPattern],
   );
 
   // --- Gestió de pistes ---------------------------------------------------
@@ -257,31 +297,30 @@ export function useSequencer() {
       if (eliminada) kit.removeTrack(eliminada);
       applyTracks(kit, next);
     }
-    patternRef.current = next;
-    setPattern(next);
-  }, []);
+    setPattern(() => next);
+  }, [setPattern]);
 
   const addTrack = useCallback(
-    (kind: VoiceKind) => restructure(add(patternRef.current, kind)),
+    (kind: VoiceKind) => restructure(add(currentPattern(songRef.current), kind)),
     [restructure],
   );
 
   const duplicateTrack = useCallback(
-    (id: string) => restructure(duplicate(patternRef.current, id)),
+    (id: string) => restructure(duplicate(currentPattern(songRef.current), id)),
     [restructure],
   );
 
   const removeTrack = useCallback(
     (id: string) => {
-      const next = remove(patternRef.current, id);
-      if (next === patternRef.current) return;
+      const next = remove(currentPattern(songRef.current), id);
+      if (next === currentPattern(songRef.current)) return;
       restructure(next, id);
     },
     [restructure],
   );
 
   const moveTrack = useCallback(
-    (id: string, delta: number) => restructure(move(patternRef.current, id, delta)),
+    (id: string, delta: number) => restructure(move(currentPattern(songRef.current), id, delta)),
     [restructure],
   );
 
@@ -299,7 +338,7 @@ export function useSequencer() {
 
   const setKey = useCallback((key: Key) => {
     setPattern((prev) => ({ ...clonePattern(prev), key }));
-  }, []);
+  }, [setPattern]);
 
   const setBassNote = useCallback(
     (id: string, index: number, note: BassNote | null) =>
@@ -319,23 +358,76 @@ export function useSequencer() {
     [editTrack],
   );
 
+  // --- El banc de ranures --------------------------------------------------
+
+  /** Tria quina ranura sona i s'edita. Aplica el kit de seguida. */
+  const selectSlot = useCallback(
+    (index: number) => {
+      commitSong((s) => {
+        if (index < 0 || index >= s.slots.length || index === s.current) return s;
+        const next = { ...s, current: index };
+        if (kitRef.current) applyTracks(kitRef.current, currentPattern(next));
+        return next;
+      });
+      lastSwitchRef.current = barsRef.current;
+    },
+    [commitSong],
+  );
+
+  const setFollow = useCallback(
+    (index: number, follow: FollowAction) =>
+      commitSong((s) => {
+        const next = cloneSong(s);
+        if (next.slots[index]) next.slots[index].follow = follow;
+        return next;
+      }),
+    [commitSong],
+  );
+
+  /** Copia el patró d'una ranura a una altra, la follow action a part. */
+  const copySlot = useCallback(
+    (from: number, to: number) =>
+      commitSong((s) => {
+        if (from === to || !s.slots[from] || !s.slots[to]) return s;
+        const next = cloneSong(s);
+        next.slots[to].pattern = clonePattern(s.slots[from].pattern);
+        if (to === next.current && kitRef.current) {
+          applyTracks(kitRef.current, next.slots[to].pattern);
+        }
+        return next;
+      }),
+    [commitSong],
+  );
+
+  const clearSlot = useCallback(
+    (index: number) =>
+      commitSong((s) => {
+        const next = cloneSong(s);
+        if (next.slots[index]) {
+          next.slots[index].pattern = emptyPattern(SLOT_NAMES[index]);
+        }
+        return next;
+      }),
+    [commitSong],
+  );
+
   const setBpm = useCallback((bpm: number) => {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
-  }, []);
+  }, [setPattern]);
 
   const setLength = useCallback((length: PatternLength) => {
     setPattern((prev) => ({ ...clonePattern(prev), length }));
-  }, []);
+  }, [setPattern]);
 
   const setSwing = useCallback((swing: number) => {
     setPattern((prev) => ({ ...prev, swing }));
-  }, []);
+  }, [setPattern]);
 
   const loadPattern = useCallback((p: Pattern) => {
     const next = clonePattern(p);
-    setPattern(next);
+    setPattern(() => next);
     if (kitRef.current) applyTracks(kitRef.current, next);
-  }, []);
+  }, [setPattern]);
 
   const clearAll = useCallback(() => {
     setPattern((prev) => ({
@@ -343,7 +435,7 @@ export function useSequencer() {
       name: "Sense títol",
       tracks: prev.tracks.map((t) => ({ ...t, steps: emptyLane() })),
     }));
-  }, []);
+  }, [setPattern]);
 
   /** Genera alguna cosa tocable, no soroll: cada tipus de veu té la seva densitat. */
   const randomise = useCallback(() => {
@@ -364,7 +456,7 @@ export function useSequencer() {
       if (primer) primer.steps[0] = 2;
       return next;
     });
-  }, []);
+  }, [setPattern]);
 
   const [exporting, setExporting] = useState(false);
 
@@ -376,7 +468,7 @@ export function useSequencer() {
     setExporting(true);
     try {
       if (!toneRef.current) toneRef.current = await import("tone");
-      return await renderPattern(toneRef.current, patternRef.current);
+      return await renderPattern(toneRef.current, currentPattern(songRef.current));
     } finally {
       setExporting(false);
     }
@@ -419,6 +511,11 @@ export function useSequencer() {
     setSwing,
     loadPattern,
     clearAll,
+    song,
+    selectSlot,
+    setFollow,
+    copySlot,
+    clearSlot,
     randomise,
     audition,
     exportWav,
