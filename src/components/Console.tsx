@@ -47,18 +47,25 @@ export function Console() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Les dreceres del navegador manen: cmd+1 canvia de pestanya, no fa sonar res.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      // Només s'aparten els camps on l'usuari escriu de debò. Un control
+      // lliscant també és un <input>, però amb el focus a sobre la barra
+      // espaiadora hi és inútil, i abans això deixava el transport mut.
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
+      const escrivint =
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable ||
+        (target instanceof HTMLInputElement &&
+          !["range", "checkbox", "radio", "button", "submit"].includes(
+            target.type,
+          ));
+      if (escrivint) return;
+
       if (e.code === "Space") {
         e.preventDefault();
-        toggleTransport();
+        if (!e.repeat) toggleTransport();
         return;
       }
       const voice = VOICES.find((v) => v.key === e.key);
