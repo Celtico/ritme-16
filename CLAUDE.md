@@ -64,13 +64,10 @@ Abans de donar una tasca per acabada, `typecheck` i `lint` han de passar nets.
 
 ## Sospitós / pendent
 
-- `npm run typecheck` falla a `src/hooks/useSequencer.ts:64`: `Sequence<number>` no
-  encaixa amb `Sequence<unknown>`, perquè l'àlies local fa servir `InstanceType<...>`,
-  que perd el paràmetre de tipus. Cal escriure'l com a `import("tone").Sequence<number>`.
 - `MetalSynth.triggerAttackRelease` a `src/lib/kit.ts` (aro, cencerro): **resolt pel que
   fa a la signatura**. A Tone 15.1.22 `MetalSynth` estén `Monophonic`, o sigui que hereta
   `triggerAttackRelease(note, duration, time?, velocity?)`; les crides amb la freqüència
   al davant (`420`, `560`) són correctes i `tsc` no s'hi queixa. El que **no** està
   comprovat és com sonen.
-- Res del projecte no s'ha executat mai al navegador: ni el so, ni el playhead, ni el
-  desat a `localStorage`.
+- `typecheck` i `build` passen nets, però res no s'ha executat mai al navegador: ni el
+  so, ni el playhead, ni el desat a `localStorage`.

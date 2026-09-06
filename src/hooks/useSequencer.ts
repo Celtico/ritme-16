@@ -14,7 +14,9 @@ import {
 } from "@/lib/pattern";
 
 type ToneModule = typeof import("tone");
-type Sequence = InstanceType<ToneModule["Sequence"]>;
+// InstanceType<> perdria el paràmetre de tipus i el deixaria en `unknown`;
+// els passos de la seqüència són índexs.
+type StepSequence = import("tone").Sequence<number>;
 
 const ACCENT_VELOCITY = 1;
 const NORMAL_VELOCITY = 0.6;
@@ -29,7 +31,7 @@ export function useSequencer() {
 
   const toneRef = useRef<ToneModule | null>(null);
   const kitRef = useRef<DrumKit | null>(null);
-  const seqRef = useRef<Sequence | null>(null);
+  const seqRef = useRef<StepSequence | null>(null);
   const patternRef = useRef(pattern);
 
   useEffect(() => {
