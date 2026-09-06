@@ -14,7 +14,22 @@ import {
   type VoiceParams,
 } from "./voices";
 
-export const STEPS = 16;
+/**
+ * Les files sempre tenen 32 cel·les; el que canvia és quantes en sonen.
+ * Escurçar un patró no ha d'esborrar res: si el tornes a allargar, hi has de
+ * retrobar el que hi havia.
+ */
+export const MAX_STEPS = 32;
+
+export const PATTERN_LENGTHS = [8, 16, 32] as const;
+export type PatternLength = (typeof PATTERN_LENGTHS)[number];
+
+/** La llargada per defecte, i la que hi havia quan era una constant. */
+export const STEPS: PatternLength = 16;
+
+export function isPatternLength(v: unknown): v is PatternLength {
+  return (PATTERN_LENGTHS as readonly unknown[]).includes(v);
+}
 
 export * from "./theory";
 export { isMelodic, MELODIC_KINDS, midiToHz } from "./voices";
@@ -135,11 +150,11 @@ export const BASS_MAX_LENGTH = 4;
 export const CHORD_MAX_LENGTH = 8;
 
 export function emptyBass(): BassStep[] {
-  return Array<BassStep>(STEPS).fill(null);
+  return Array<BassStep>(MAX_STEPS).fill(null);
 }
 
 export function emptyChords(): ChordStep[] {
-  return Array<ChordStep>(STEPS).fill(null);
+  return Array<ChordStep>(MAX_STEPS).fill(null);
 }
 
 export interface Track {
@@ -233,10 +248,12 @@ export interface Pattern {
   returns: Returns;
   /** Tonalitat i mode. Els acords són graus; el baix, MIDI absoluts. */
   key: Key;
+  /** Quants passos sonen. Les files en guarden sempre MAX_STEPS. */
+  length: PatternLength;
 }
 
 export function emptyLane(): Cell[] {
-  return Array<Cell>(STEPS).fill(0);
+  return Array<Cell>(MAX_STEPS).fill(0);
 }
 
 export function defaultMix(): ChannelMix {
@@ -285,6 +302,7 @@ export function emptyPattern(name = "Sense títol"): Pattern {
     macros: defaultMacros(),
     returns: defaultReturns(),
     key: DEFAULT_KEY,
+    length: STEPS,
   };
 }
 
@@ -317,6 +335,7 @@ export function clonePattern(p: Pattern): Pattern {
     })),
     returns: { a: { ...p.returns.a }, b: { ...p.returns.b } },
     key: { ...p.key },
+    length: p.length,
   };
 }
 
@@ -449,7 +468,7 @@ export function isAudible(p: Pattern, t: Track): boolean {
  */
 export function lane(spec: string): Cell[] {
   const cells = emptyLane();
-  for (let i = 0; i < Math.min(spec.length, STEPS); i++) {
+  for (let i = 0; i < Math.min(spec.length, MAX_STEPS); i++) {
     const c = spec[i];
     cells[i] = c === "X" ? 2 : c === "x" ? 1 : 0;
   }

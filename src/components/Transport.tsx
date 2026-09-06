@@ -3,6 +3,8 @@
 import type { Theme } from "@/lib/theme";
 import {
   MODE_NAMES,
+  PATTERN_LENGTHS,
+  type PatternLength,
   pitchClassName,
   type Key,
   type Mode,
@@ -17,6 +19,8 @@ interface Props {
   currentStep: number;
   patternKey: Key;
   onKey: (key: Key) => void;
+  length: PatternLength;
+  onLength: (n: PatternLength) => void;
   snap: boolean;
   onSnap: (v: boolean) => void;
   onToggle: () => void;
@@ -34,6 +38,8 @@ export function Transport({
   currentStep,
   patternKey,
   onKey,
+  length,
+  onLength,
   snap,
   onSnap,
   onToggle,
@@ -102,6 +108,18 @@ export function Transport({
       </div>
 
       <div className="flex items-center gap-1">
+        <select
+          value={length}
+          aria-label="Llargada del patró"
+          onChange={(e) => onLength(Number(e.target.value) as PatternLength)}
+          className="rounded-[3px] border border-on-accent/30 bg-header px-1 py-0.5 text-[12px] text-on-accent tabular-nums"
+        >
+          {PATTERN_LENGTHS.map((n) => (
+            <option key={n} value={n}>
+              {n} passos
+            </option>
+          ))}
+        </select>
         <select
           value={patternKey.root}
           aria-label="Fonamental"

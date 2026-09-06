@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { NotePicker } from "./NotePicker";
 import { ChordPicker } from "./ChordPicker";
+import { groupsOf4 } from "./groups";
 import { ROW_GAP, ROW_HEIGHT } from "./layout";
 import {
   BASS_MAX_LENGTH,
@@ -18,6 +19,7 @@ import {
 
 interface Props {
   track: Track;
+  length: number;
   patternKey: Key;
   currentStep: number;
   dimmed: boolean;
@@ -26,8 +28,6 @@ interface Props {
   onChord: (index: number, chord: ChordNote | null) => void;
 }
 
-const GROUPS = [0, 1, 2, 3];
-
 /**
  * Una fila de notes. A diferència dels passos de percussió, una nota s'estén
  * visualment sobre les cel·les que cobreix: es dibuixa una barra contínua i
@@ -35,6 +35,7 @@ const GROUPS = [0, 1, 2, 3];
  */
 export function MelodyRow({
   track,
+  length,
   patternKey,
   currentStep,
   dimmed,
@@ -81,10 +82,9 @@ export function MelodyRow({
       className={["relative flex gap-3", dimmed ? "opacity-45" : ""].join(" ")}
       style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
     >
-      {GROUPS.map((g) => (
-        <div key={g} className="flex flex-1 gap-1">
-          {[0, 1, 2, 3].map((k) => {
-            const i = g * 4 + k;
+      {groupsOf4(length).map((g, gi) => (
+        <div key={gi} className="flex flex-1 gap-1">
+          {g.map((i) => {
             const cobreix = noteCovering(fila, i);
             const propia = cobreix?.start === i;
             // les cel·les que una nota cobreix no es tornen a dibuixar

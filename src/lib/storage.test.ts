@@ -61,7 +61,7 @@ describe("migració del model antic", () => {
   it("completa amb pistes buides les veus que no hi eren", () => {
     const p = normalise(patroAntic());
     const aro = p.tracks.find((t) => t.id === "aro")!;
-    expect(aro.steps).toHaveLength(16);
+    expect(aro.steps).toHaveLength(32);
     expect(aro.steps.every((c) => c === 0)).toBe(true);
     expect(aro.mix).toEqual(defaultMix());
   });
@@ -168,7 +168,7 @@ describe("normalise del model nou", () => {
       tracks: [{ ...p.tracks[0], steps: [1, 2, 9, null, 1] }],
     };
     const steps = normalise(brut).tracks[0].steps;
-    expect(steps).toHaveLength(16);
+    expect(steps).toHaveLength(32);
     expect(steps.slice(0, 5)).toEqual([1, 2, 0, 0, 1]);
   });
 

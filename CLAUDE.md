@@ -34,6 +34,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - Les operacions sobre pistes (afegir, duplicar, moure, eliminar) són funcions pures de
   `pattern.ts` que retornen un patró nou; el hook només les crida i avisa el kit. Màxim
   16 pistes, i mai cap patró sense pistes.
+- Les files guarden sempre `MAX_STEPS` (32) cel·les; `pattern.length` diu quantes en
+  sonen. Escurçar un patró no esborra res.
 - El patró és una llista de pistes (`Pattern.tracks`), no registres indexats per veu.
   L'ordre de l'array és l'ordre visual i `track.id` és el que lliga la pista amb la seva
   cadena de síntesi.
@@ -75,7 +77,10 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - `src/components/layout.ts` — les mesures compartides (alçada de fila, buit, alçada de
   la regla, amplades del panell). **Si les repeteixes a un component, els dos panells es
   desalineen**: la fila 8 d'una banda ha de caure al mateix píxel que la de l'altra.
-- `src/components/StepRow.tsx` / `StepRuler.tsx` — els setze passos d'una pista i els
+- `src/components/groups.ts` — reparteix els índexs en grups de quatre. **La regla, els
+  passos i les files melòdiques han de fer servir aquesta i no la seva**: si cadascú es
+  fes la partició, es desalinearien en canviar la llargada.
+- `src/components/StepRow.tsx` / `StepRuler.tsx` — els passos d'una pista i els
   seus números. Comparteixen classes d'amplada; la regla no en té cap d'escrita a mà.
 - `src/components/MelodyRow.tsx` — la fila del baix i la dels acords. Una nota s'estén
   sobre les cel·les que cobreix: no es dibuixen cel·les repetides.
@@ -145,7 +150,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   `Tone.getDraw()` ja programades que arriben després de l'`stop()`.
 - El baix i els acords sonen i s'editen; verificat al navegador que el baix toca les
   notes previstes i que els acords surten a tres veus al registre bo.
-- Pendent, no fet: llargada de patró variable (STEPS segueix sent una constant),
-  exportar a WAV, compartir per URL, el banc de 8 patrons amb follow actions i les
-  escenes.
+- La llargada variable està verificada sonant: amb 8 passos el charles obert, que només
+  toca al pas 13, dona exactament zero, i tornant a 16 hi torna a ser.
+- Pendent, no fet: exportar a WAV, compartir per URL, el banc de 8 patrons amb follow
+  actions i les escenes.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

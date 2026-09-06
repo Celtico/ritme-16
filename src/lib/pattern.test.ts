@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { groupsOf4 } from "../components/groups";
 import {
   applyMacroAssignment,
   clonePattern,
@@ -10,25 +11,28 @@ import {
   KINDS,
   makeTrack,
   PRESETS,
-  STEPS,
   MAX_LFO,
   MAX_MACROS,
   degreeToChord,
   isInScale,
   isMelodic,
   midiToName,
+  MAX_STEPS,
+  isPatternLength,
   MOD_TARGETS,
+  PATTERN_LENGTHS,
   VOICE_KINDS,
   anySolo,
   isAudible,
 } from "./pattern";
 
 describe("model del patró", () => {
-  it("dona setze cel·les a totes les pistes de tots els presets", () => {
+  it("dona la capacitat sencera a totes les files de tots els presets", () => {
     for (const p of PRESETS) {
       for (const t of p.tracks) {
-        expect(t.steps, `${p.name} / ${t.id}`).toHaveLength(STEPS);
+        expect(t.steps, `${p.name} / ${t.id}`).toHaveLength(MAX_STEPS);
       }
+      expect(p.length, p.name).toBe(16);
     }
   });
 
@@ -131,10 +135,10 @@ describe("comandaments de so per defecte", () => {
     const p = emptyPattern();
     for (const t of p.tracks) {
       if (t.kind === "baix") {
-        expect(t.bass, t.id).toHaveLength(STEPS);
+        expect(t.bass, t.id).toHaveLength(MAX_STEPS);
         expect(t.chords, t.id).toBeUndefined();
       } else if (t.kind === "acords") {
-        expect(t.chords, t.id).toHaveLength(STEPS);
+        expect(t.chords, t.id).toHaveLength(MAX_STEPS);
         expect(t.bass, t.id).toBeUndefined();
       } else {
         expect(t.bass, t.id).toBeUndefined();
@@ -275,10 +279,10 @@ describe("baix i acords dels presets", () => {
   const melodica = (p: (typeof PRESETS)[number], kind: "baix" | "acords") =>
     p.tracks.find((t) => t.kind === kind)!;
 
-  it("dona setze cel·les a les dues files melòdiques", () => {
+  it("dona la capacitat sencera a les dues files melòdiques", () => {
     for (const p of PRESETS) {
-      expect(melodica(p, "baix").bass, p.name).toHaveLength(STEPS);
-      expect(melodica(p, "acords").chords, p.name).toHaveLength(STEPS);
+      expect(melodica(p, "baix").bass, p.name).toHaveLength(MAX_STEPS);
+      expect(melodica(p, "acords").chords, p.name).toHaveLength(MAX_STEPS);
     }
   });
 
@@ -304,7 +308,7 @@ describe("baix i acords dels presets", () => {
           for (let j = i + 1; j < i + n.length; j++) {
             expect(fila[j], `${p.name} pas ${i} cobreix ${j}`).toBeNull();
           }
-          expect(i + n.length, `${p.name} pas ${i} surt del compàs`).toBeLessThanOrEqual(STEPS);
+          expect(i + n.length, `${p.name} pas ${i} surt del compàs`).toBeLessThanOrEqual(p.length);
         }
       }
     }
@@ -360,5 +364,44 @@ describe("baix i acords dels presets", () => {
     expect(quart).toBeTruthy();
     const acord = degreeToChord(trencat.key, 4, "triad");
     expect(acord[1] - acord[0]).toBe(4);
+  });
+});
+
+describe("llargada del patró", () => {
+  it("només accepta 8, 16 o 32", () => {
+    expect(PATTERN_LENGTHS).toEqual([8, 16, 32]);
+    expect(isPatternLength(16)).toBe(true);
+    expect(isPatternLength(12)).toBe(false);
+    expect(isPatternLength("16")).toBe(false);
+  });
+
+  it("guarda sempre la capacitat sencera, sigui quina sigui la llargada", () => {
+    const p = emptyPattern();
+    p.length = 8;
+    for (const t of p.tracks) expect(t.steps).toHaveLength(MAX_STEPS);
+  });
+
+  it("no esborra res en escurçar i tornar a allargar", () => {
+    const p = emptyPattern();
+    p.tracks[0].steps[20] = 2;
+    p.length = 8;
+    const clonat = clonePattern(p);
+    clonat.length = 32;
+    expect(clonat.tracks[0].steps[20]).toBe(2);
+  });
+
+  it("reparteix els passos en grups de quatre a qualsevol llargada", () => {
+    expect(groupsOf4(8)).toEqual([
+      [0, 1, 2, 3],
+      [4, 5, 6, 7],
+    ]);
+    expect(groupsOf4(16)).toHaveLength(4);
+    expect(groupsOf4(32)).toHaveLength(8);
+    // cap índex perdut ni repetit
+    for (const n of PATTERN_LENGTHS) {
+      expect(groupsOf4(n).flat()).toEqual(
+        Array.from({ length: n }, (_, i) => i),
+      );
+    }
   });
 });

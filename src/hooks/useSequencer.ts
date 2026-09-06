@@ -18,12 +18,12 @@ import {
   moveTrack as move,
   PRESETS,
   removeTrack as remove,
-  STEPS,
   type BassNote,
   type Cell,
   type ChannelMix,
   type ChordNote,
   type Key,
+  type PatternLength,
   type Macro,
   type Pattern,
   type Returns,
@@ -92,7 +92,10 @@ export function useSequencer() {
     transport.swingSubdivision = "16n";
 
     if (!seqRef.current) {
-      const indices = Array.from({ length: STEPS }, (_, i) => i);
+      const indices = Array.from(
+        { length: patternRef.current.length },
+        (_, i) => i,
+      );
       seqRef.current = new Tone.Sequence(
         (time, step) => {
           const p = patternRef.current;
@@ -179,6 +182,18 @@ export function useSequencer() {
     Tone.getTransport().bpm.value = pattern.bpm;
     Tone.getTransport().swing = pattern.swing;
   }, [pattern.bpm, pattern.swing]);
+
+  /**
+   * La llargada es canvia escrivint els events de la seqüència, no refent-la:
+   * recrear-la mentre sona perdria el lloc del transport.
+   */
+  useEffect(() => {
+    const seq = seqRef.current;
+    if (!seq) return;
+    if (seq.events.length !== pattern.length) {
+      seq.events = Array.from({ length: pattern.length }, (_, i) => i);
+    }
+  }, [pattern.length]);
 
   // --- Edició -----------------------------------------------------------
 
@@ -351,6 +366,10 @@ export function useSequencer() {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
   }, []);
 
+  const setLength = useCallback((length: PatternLength) => {
+    setPattern((prev) => ({ ...clonePattern(prev), length }));
+  }, []);
+
   const setSwing = useCallback((swing: number) => {
     setPattern((prev) => ({ ...prev, swing }));
   }, []);
@@ -374,12 +393,14 @@ export function useSequencer() {
     setPattern((prev) => {
       const next = clonePattern(prev);
       for (const t of next.tracks) {
-        t.steps = Array.from({ length: STEPS }, (_, i) => {
+        const nova = emptyLane();
+        for (let i = 0; i < next.length; i++) {
           const onBeat = i % 4 === 0;
           const chance = KINDS[t.kind].density * (onBeat ? 2.4 : 1);
-          if (Math.random() > chance) return 0 as Cell;
-          return (onBeat && Math.random() < 0.4 ? 2 : 1) as Cell;
-        });
+          if (Math.random() > chance) continue;
+          nova[i] = (onBeat && Math.random() < 0.4 ? 2 : 1) as Cell;
+        }
+        t.steps = nova;
       }
       // garanteix un punt d'ancoratge al primer temps
       const primer = next.tracks.find((t) => t.kind === "bombo") ?? next.tracks[0];
@@ -421,6 +442,7 @@ export function useSequencer() {
     renameTrack,
     setTrackColor,
     setBpm,
+    setLength,
     setSwing,
     loadPattern,
     clearAll,

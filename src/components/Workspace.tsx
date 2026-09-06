@@ -150,6 +150,8 @@ export function Workspace() {
         currentStep={seq.currentStep}
         patternKey={seq.pattern.key}
         onKey={seq.setKey}
+        length={seq.pattern.length}
+        onLength={seq.setLength}
         snap={snap}
         onSnap={setSnap}
         onToggle={seq.toggleTransport}
@@ -168,12 +170,13 @@ export function Workspace() {
           className="min-w-0 overflow-auto px-3 pt-2"
         >
           <div className="min-w-[420px]">
-            <StepRuler currentStep={seq.currentStep} />
+            <StepRuler currentStep={seq.currentStep} length={seq.pattern.length} />
             {tracks.map((track) =>
               isMelodic(track.kind) ? (
                 <MelodyRow
                   key={track.id}
                   track={track}
+                  length={seq.pattern.length}
                   patternKey={seq.pattern.key}
                   currentStep={seq.currentStep}
                   dimmed={!isAudible(seq.pattern, track)}
@@ -185,6 +188,7 @@ export function Workspace() {
                 <StepRow
                   key={track.id}
                   track={track}
+                  length={seq.pattern.length}
                   currentStep={seq.currentStep}
                   dimmed={!isAudible(seq.pattern, track)}
                   onToggleStep={(index, accent) =>

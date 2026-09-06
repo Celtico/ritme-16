@@ -7,6 +7,8 @@ import {
   defaultReturns,
   DEFAULT_KEY,
   emptyBass,
+  isPatternLength,
+  STEPS,
   emptyChords,
   BASS_MAX_LENGTH,
   CHORD_MAX_LENGTH,
@@ -76,6 +78,7 @@ function looksLikePattern(value: unknown): boolean {
 }
 
 function normaliseSteps(cells: unknown): Cell[] {
+  // emptyLane() ja dona MAX_STEPS; el que vingui més curt es completa
   const out = emptyLane();
   if (!Array.isArray(cells)) return out;
   for (let i = 0; i < out.length; i++) {
@@ -274,6 +277,7 @@ function fromLegacy(old: LegacyPattern): Pattern {
     macros: defaultMacros(),
     returns: defaultReturns(),
     key: { ...DEFAULT_KEY },
+    length: STEPS,
   };
 }
 
@@ -401,6 +405,8 @@ export function normalise(value: unknown): Pattern {
       macros: normaliseMacros(value.macros),
       returns: normaliseReturns(value.returns),
       key: normaliseKey(value.key),
+      // els patrons anteriors a la llargada variable en tenien setze
+      length: isPatternLength(value.length) ? value.length : STEPS,
     };
   }
 

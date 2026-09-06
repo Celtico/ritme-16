@@ -1,21 +1,25 @@
 "use client";
 
 import { RULER_HEIGHT } from "./layout";
-
-const GROUPS = [0, 1, 2, 3];
+import { groupsOf4 } from "./groups";
 
 /**
  * Els números dels passos. Fa servir exactament la mateixa estructura de
  * grups i les mateixes classes d'amplada que una fila de passos, perquè si
  * no, els números deixen de caure sobre les seves cel·les.
  */
-export function StepRuler({ currentStep }: { currentStep: number }) {
+export function StepRuler({
+  currentStep,
+  length,
+}: {
+  currentStep: number;
+  length: number;
+}) {
   return (
     <div className="flex gap-3" style={{ height: RULER_HEIGHT }} aria-hidden>
-      {GROUPS.map((g) => (
-        <div key={g} className="flex flex-1 gap-1">
-          {[0, 1, 2, 3].map((i) => {
-            const index = g * 4 + i;
+      {groupsOf4(length).map((g, gi) => (
+        <div key={gi} className="flex flex-1 gap-1">
+          {g.map((index, i) => {
             return (
               <div
                 key={index}

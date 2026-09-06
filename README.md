@@ -18,6 +18,7 @@ npm run dev
 | Activar un pas | clic |
 | Accentuar un pas | majúscules + clic, o clic dret |
 | Arrencar i aturar | barra espaiadora, o el botó rodó |
+| Canviar la llargada del patró | el selector de passos, al transport |
 | Escoltar una veu solta | tecles 1–8, o el botó ▶ de la fila |
 | Obrir els comandaments de so | clic al nom de la veu |
 | Buidar una fila | doble clic al nom de la veu |
@@ -39,6 +40,9 @@ s'estén sobre les cel·les que cobreix.
 
 Canviar la tonalitat no toca les notes del baix, que són absolutes, però sí
 que canvia com sonen els acords, que són graus.
+
+El patró pot fer 8, 16 o 32 passos. Les files en guarden sempre 32: escurçar
+un patró no esborra res, i tornant-lo a allargar hi retrobes el que hi havia.
 
 El botó «+ Pista» n'afegeix (fins a 16) i el menú ⋯ de cada fila permet
 reanomenar-la, canviar-ne el color, duplicar-la, moure-la o eliminar-la. Les
