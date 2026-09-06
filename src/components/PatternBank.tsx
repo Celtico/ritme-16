@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { PRESETS, type Pattern } from "@/lib/pattern";
 import { EXPORT_BARS } from "@/lib/render";
+import { GenerateMenu } from "./GenerateMenu";
 import { shareUrl } from "@/lib/share";
+import type { Song } from "@/lib/song";
 import { wavFileName } from "@/lib/wav";
 import { loadSaved, persist, type SavedPattern } from "@/lib/storage";
 
@@ -14,6 +16,8 @@ interface Props {
   onRandomise: () => void;
   onExport: () => Promise<ArrayBuffer | null>;
   exporting: boolean;
+  dirty: boolean;
+  onGenerate: (song: Song) => void;
 }
 
 function PanelButton({
@@ -51,6 +55,8 @@ export function PatternBank({
   onRandomise,
   onExport,
   exporting,
+  dirty,
+  onGenerate,
 }: Props) {
   const [saved, setSaved] = useState<SavedPattern[]>([]);
   const [name, setName] = useState("");
@@ -131,6 +137,7 @@ export function PatternBank({
         <PanelButton onClick={() => void copiaEnllac()}>
           {copiat ? "Enllaç copiat" : "Copiar enllaç"}
         </PanelButton>
+        <GenerateMenu dirty={dirty} onGenerate={onGenerate} />
         {error ? (
           <span role="alert" className="text-[12px] text-oxblood">
             {error}

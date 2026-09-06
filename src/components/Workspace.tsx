@@ -346,6 +346,8 @@ export function Workspace() {
             onRandomise={seq.randomise}
             onExport={seq.exportWav}
             exporting={seq.exporting}
+            dirty={seq.dirty}
+            onGenerate={seq.loadSong}
           />
         </div>
       </div>

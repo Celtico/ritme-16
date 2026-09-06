@@ -74,11 +74,31 @@ export function useSequencer() {
   const toneRef = useRef<ToneModule | null>(null);
   const kitRef = useRef<DrumKit | null>(null);
   const seqRef = useRef<StepSequence | null>(null);
-  const commitSong = useCallback((updater: (s: Song) => Song) => {
-    const next = updater(songRef.current);
-    songRef.current = next;
-    setSong(next);
-  }, []);
+  /** Hi ha canvis des de l'últim cop que es va carregar una cançó sencera? */
+  const [dirty, setDirty] = useState(false);
+
+  const commitSong = useCallback(
+    (updater: (s: Song) => Song, net = false) => {
+      const next = updater(songRef.current);
+      songRef.current = next;
+      setSong(next);
+      setDirty(!net);
+    },
+    [],
+  );
+
+  /** Substitueix la cançó sencera. La marca com a neta. */
+  const loadSong = useCallback(
+    (nova: Song) => {
+      commitSong(() => {
+        if (kitRef.current) applyTracks(kitRef.current, currentPattern(nova));
+        return nova;
+      }, true);
+      barsRef.current = 0;
+      lastSwitchRef.current = 0;
+    },
+    [commitSong],
+  );
 
   /** Reescriu el patró de la ranura que sona. */
   const setPattern = useCallback(
@@ -562,6 +582,8 @@ export function useSequencer() {
     loadPattern,
     clearAll,
     song,
+    dirty,
+    loadSong,
     selectSlot,
     setFollow,
     copySlot,

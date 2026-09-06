@@ -128,6 +128,13 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   comparteixen el transport en directe i l'exportació**; si cadascú tingués la seva
   còpia, el WAV acabaria sonant diferent del que se sent.
 - `src/lib/render.ts` — el renderitzat fora de línia amb `Tone.Offline`.
+- `src/lib/rng.ts` — atzar reproduïble. **Res del generador no ha de cridar `Math.random`
+  directament**: l'atzar va sempre per paràmetre, o la llavor no serveix de res.
+- `src/lib/generate.ts` — el motor. Rep l'estil com a dada; no en té cap escrit a dins.
+- `src/lib/styles.ts` — els set estils. Afegir-ne un és afegir una entrada aquí.
+- `src/lib/critic.ts` — què fa que una cançó valgui la pena. Si suspèn, el generador
+  torna a provar amb la llavor següent.
+- `src/components/GenerateMenu.tsx` — el selector d'estil i llavor.
 - `src/lib/song.ts` — el banc de vuit ranures i les follow actions. `resolveFollow()` és
   pura i rep el generador d'atzar per paràmetre, per poder-la provar dues vegades igual.
 - `src/components/SlotBank.tsx` — la fila A–H amb l'acció i el copia/enganxa.
@@ -150,37 +157,20 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 ## Sospitós / pendent
 
-- Els dos temes estan provats al navegador: sense tria desada mana `prefers-color-scheme`,
-  el commutador desa la tria a `localStorage`, i en recarregar la tria guanya el sistema.
-  Cap avís d'hidratació.
-- El relleu s'ha revisat en fosc: els passos buits porten una línia clara a baix i el
-  botó de play un bisell a dalt, perquè l'ombra negra sola no es veia.
-- **Sense provar**: el parpelleig real en obrir amb la xarxa lenta (l'script en línia
-  hauria d'evitar-lo, però només s'ha comprovat que el tema ja és correcte al primer
-  render), el tema de nit a Safari i Firefox, i el `themeColor` de la barra del mòbil.
-- L'app ocupa el viewport sencer i no es desplaça mai la pàgina. Verificat a 2560, 1440 i
-  1024 px; **els 390 px no s'han pogut provar** perquè Chrome no fa la finestra tan
-  estreta.
-- Els vúmetres, els enviaments, el panoràmic i els retorns estan verificats per mesura;
-  el camí de `prefers-reduced-motion` dels vúmetres, no.
-- Modulacions: `velocitat` i `atzar` cap a qualsevol destinació i els LFO cap al tall
-  estan verificats; una modulació d'LFO sonant i `Env Amp → tall`, no.
-- El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
-  `Tone.getDraw()` ja programades que arriben després de l'`stop()`.
-- El baix i els acords sonen i s'editen; verificat al navegador que el baix toca les
-  notes previstes i que els acords surten a tres veus al registre bo.
-- La llargada variable està verificada sonant: amb 8 passos el charles obert, que només
-  toca al pas 13, dona exactament zero, i tornant a 16 hi torna a ser.
-- L'exportació a WAV està verificada al navegador: 10,24 s a 124 ppm (els 4 compassos
-  més la cua), estèreo a 48 kHz, capçal correcte, pic 0,845 i cap finestra muda.
-- Compartir per URL verificat de punta a punta: es genera l'enllaç, s'obre en una càrrega
-  neta i tornen els passos, els accents, el baix, la tonalitat, la llargada i el tempo.
-- El banc A–H està verificat sonant: 76 passos observats sense cap salt irregular, tots
-  els canvis de ranura al pas 15, i cap silenci més llarg que el que hi ha entre bombos.
-- Les escenes estan verificades al navegador: dues escenes amb barreges diferents es
-  recuperen totes dues en tots dos sentits.
-- **L'escena activa segueix el que toques**: després de desar-la, un M o un S la
-  modifiquen. Per fer-ne una de diferent cal duplicar-la amb «+» i editar després; si
-  s'edita abans, es reescriu la que hi havia. Ve de l'encàrrec i no és un descuit, però
-  no és evident.
+- El generador està provat amb 200 llavors per estil: 1.400 cançons vàlides, totes
+  passen el crític i totes cauen dins dels rangs declarats. Cada regla de gènere té el
+  seu test (house sempre als quatre temps, breakbeat mai al tercer, dub el charles obert
+  al contratemps, ternari el tresillo…).
+- **El ternari no fa 12 ni 24 passos**: `PATTERN_LENGTHS` és `[8, 16, 32]`. Es fa amb 32
+  i tresillo 3+3+2, que és el que tanca en una graella binària. Si algun dia es vol un
+  6/8 de debò, cal afegir 12 i 24 al model.
+- **No s'ha pogut escoltar res.** Tot el que se sap del so surt de mesures amb un
+  `AnalyserNode`; que una cançó generada soni a l'estil que diu és l'única cosa que no
+  es pot verificar des d'aquí.
+- `lib/demos.ts` **no existeix**: les cinc cançons d'exemple escrites a mà no s'han fet.
+- El canvi de ranura no fa cap tall: verificat amb el playhead (cap salt irregular, tots
+  els canvis al darrer pas) i amb l'envolupant (cap silenci més llarg que el que hi ha
+  entre dos bombos).
+- L'escena activa segueix el que toques: per fer-ne una de diferent cal duplicar-la amb
+  «+» i editar després.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.
