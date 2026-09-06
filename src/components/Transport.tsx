@@ -10,6 +10,7 @@ interface Props {
   onSwing: (swing: number) => void;
 }
 
+/** Una sola franja de 52 px: hi ha de cabre tot en una línia. */
 export function Transport({
   isPlaying,
   bpm,
@@ -22,36 +23,36 @@ export function Transport({
   const beat = currentStep < 0 ? 0 : Math.floor(currentStep / 4) + 1;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-4 border-b border-ink/15 px-4 py-4 sm:px-6">
+    <div className="flex h-[52px] items-center gap-4 border-b border-ink/20 bg-ink px-3 text-panel-hi">
+      <h1 className="font-display text-[15px] tracking-tight">RITME-16</h1>
+
       <button
         type="button"
         onClick={onToggle}
         className={[
-          "h-14 w-14 rounded-full border-2 border-ink/45 transition-all duration-100",
-          "flex items-center justify-center active:translate-y-[2px] active:shadow-none",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ink/45 transition-all duration-100",
+          "active:translate-y-[1px] active:shadow-none",
           isPlaying
-            ? "bg-oxblood shadow-[0_3px_0_rgba(29,27,23,0.5)]"
-            : "bg-panel-hi shadow-[0_4px_0_rgba(29,27,23,0.45)] hover:bg-white",
+            ? "bg-oxblood shadow-[0_2px_0_rgba(29,27,23,0.5)]"
+            : "bg-panel-hi shadow-[0_3px_0_rgba(29,27,23,0.45)] hover:bg-white",
         ].join(" ")}
         aria-label={isPlaying ? "Aturar" : "Reproduir"}
       >
         {isPlaying ? (
-          <span className="block h-4 w-4 rounded-[2px] bg-panel-hi" />
+          <span className="block h-3 w-3 rounded-[2px] bg-panel-hi" />
         ) : (
           <span
-            className="ml-1 block h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-ink"
+            className="ml-0.5 block h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-ink"
             aria-hidden
           />
         )}
       </button>
 
-      <div className="flex items-end gap-3">
-        <div>
-          <div className="font-display text-4xl leading-none tracking-tight text-ink tabular-nums">
-            {bpm}
-          </div>
-          <div className="mt-1 text-[11px] text-ink-soft">pulsacions/min</div>
-        </div>
+      <div className="flex items-center gap-2">
+        <span className="font-display text-xl leading-none tabular-nums">
+          {bpm}
+        </span>
+        <span className="text-[10px] text-panel-lo">ppm</span>
         <input
           type="range"
           min={40}
@@ -59,15 +60,15 @@ export function Transport({
           value={bpm}
           aria-label="Tempo"
           onChange={(e) => onBpm(Number(e.target.value))}
-          className="mb-2 w-32"
+          className="w-24"
         />
       </div>
 
-      <div>
-        <div className="font-display text-2xl leading-none text-ink tabular-nums">
+      <div className="flex items-center gap-2">
+        <span className="font-display text-base leading-none tabular-nums">
           {Math.round(swing * 100)}%
-        </div>
-        <div className="mt-1 mb-2 text-[11px] text-ink-soft">swing</div>
+        </span>
+        <span className="text-[10px] text-panel-lo">swing</span>
         <input
           type="range"
           min={0}
@@ -76,7 +77,7 @@ export function Transport({
           value={swing}
           aria-label="Quantitat de swing"
           onChange={(e) => onSwing(Number(e.target.value))}
-          className="w-28"
+          className="w-20"
         />
       </div>
 
@@ -85,8 +86,8 @@ export function Transport({
           <span
             key={b}
             className={[
-              "h-2.5 w-2.5 rounded-full border border-ink/40 transition-colors duration-75",
-              isPlaying && beat === b ? "bg-ochre" : "bg-panel-lo/70",
+              "h-2.5 w-2.5 rounded-full border border-panel-lo/40 transition-colors duration-75",
+              isPlaying && beat === b ? "bg-ochre" : "bg-ink",
             ].join(" ")}
           />
         ))}

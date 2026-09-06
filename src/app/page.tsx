@@ -1,9 +1,5 @@
-import { Console } from "@/components/Console";
+import { Workspace } from "@/components/Workspace";
 
 export default function Home() {
-  return (
-    <main className="min-h-dvh">
-      <Console />
-    </main>
-  );
+  return <Workspace />;
 }

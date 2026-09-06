@@ -50,7 +50,7 @@ export function ReturnRows({ returns, onChange }: Props) {
           a.muted ? "opacity-45" : "",
         ].join(" ")}
       >
-        <div className="flex w-[372px] shrink-0 items-center gap-2 pr-2">
+        <div className="flex w-full items-center gap-2 pr-2">
           <span className="w-[118px] shrink-0 truncate text-[13px] text-ink">
             Retorn A · Reverb
           </span>
@@ -91,7 +91,7 @@ export function ReturnRows({ returns, onChange }: Props) {
           b.muted ? "opacity-45" : "",
         ].join(" ")}
       >
-        <div className="flex w-[372px] shrink-0 items-center gap-2 pr-2">
+        <div className="flex w-full items-center gap-2 pr-2">
           <span className="w-[118px] shrink-0 truncate text-[13px] text-ink">
             Retorn B · Retard
           </span>

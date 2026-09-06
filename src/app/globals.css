@@ -1,32 +1,35 @@
 @import "tailwindcss";
-
 @theme {
-  /* La superfície on recolza la màquina */
-  --color-desk: #343a30;
-  --color-desk-deep: #232821;
-
-  /* El xassís */
-  --color-panel: #ddd4c0;
-  --color-panel-hi: #efe9db;
-  --color-panel-lo: #c3b89e;
-  --color-ink: #1d1b17;
-  --color-ink-soft: #6d6656;
-
-  /* Senyals */
-  --color-oxblood: #8e2f2a;
-  --color-ochre: #c98a2b;
-  --color-teal: #23615e;
-
-  /* Colors de pista. Els tres de senyal i cinc més del mateix món: apagats,
-     prou foscos per dur text clar a sobre i distingibles en un quadrat petit. */
-  --color-rust: #a85a2b;
-  --color-olive: #6d7334;
-  --color-slate: #40566b;
-  --color-plum: #6b3a55;
-  --color-coffee: #5c4433;
-
+  --color-desk: var(--desk);
+  --color-desk-deep: var(--desk-deep);
+  --color-panel: var(--panel);
+  --color-panel-hi: var(--panel-hi);
+  --color-panel-lo: var(--panel-lo);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-oxblood: var(--oxblood);
+  --color-ochre: var(--ochre);
+  --color-teal: var(--teal);
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --desk: #343a30; --desk-deep: #232821;
+  --panel: #ddd4c0; --panel-hi: #efe9db; --panel-lo: #c3b89e;
+  --ink: #1d1b17; --ink-soft: #6d6656;
+  --oxblood: #8e2f2a; --ochre: #c98a2b; --teal: #23615e;
+  --shadow: 29 27 23;
+  color-scheme: light;
+}
+
+:root[data-theme="night"] {
+  --desk: #141412; --desk-deep: #0c0c0b;
+  --panel: #2a2825; --panel-hi: #36332e; --panel-lo: #1e1d1a;
+  --ink: #e8e2d4; --ink-soft: #9a9384;
+  --oxblood: #b8463f; --ochre: #d9a03f; --teal: #3f9490;
+  --shadow: 0 0 0;
+  color-scheme: dark;
 }
 
 html,
@@ -34,15 +37,13 @@ body {
   height: 100%;
 }
 
+/* L'app ocupa el viewport sencer: el body no ha de tenir ni fons propi ni
+   marge, i no ha de desplaçar-se mai. --color-desk queda per als divisors. */
 body {
-  background: radial-gradient(
-      120% 90% at 50% -10%,
-      color-mix(in srgb, var(--color-desk) 88%, white) 0%,
-      var(--color-desk) 45%,
-      var(--color-desk-deep) 100%
-    )
-    fixed;
-  color: var(--color-panel);
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-panel);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
