@@ -2,17 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
+import { renderPattern } from "@/lib/render";
+import {
+  ACCENT_VELOCITY,
+  applyTracks,
+  triggerStep,
+} from "@/lib/playback";
 import {
   addTrack as add,
   applyMacroAssignment,
   BASS_MAX_LENGTH,
-  CHORD_BASE_MIDI,
   CHORD_MAX_LENGTH,
   clonePattern,
-  degreeToChord,
   duplicateTrack as duplicate,
   emptyLane,
-  isAudible,
   KINDS,
   placeNote,
   moveTrack as move,
@@ -37,19 +40,6 @@ type ToneModule = typeof import("tone");
 // els passos de la seqüència són índexs.
 type StepSequence = import("tone").Sequence<number>;
 
-const ACCENT_VELOCITY = 1;
-const NORMAL_VELOCITY = 0.6;
-
-/** Aboca al kit tot el que el patró diu de cada pista i dels retorns. */
-function applyTracks(kit: DrumKit, p: Pattern) {
-  for (const t of p.tracks) {
-    kit.ensureTrack(t.id, t.kind);
-    kit.setVolume(t.id, t.mix.volume);
-    kit.setParams(t.id, t.sound);
-    kit.setRouting(t.id, t.mix);
-  }
-  kit.setReturns(p.returns);
-}
 
 export function useSequencer() {
   const [pattern, setPattern] = useState<Pattern>(() =>
@@ -98,46 +88,13 @@ export function useSequencer() {
       );
       seqRef.current = new Tone.Sequence(
         (time, step) => {
-          const p = patternRef.current;
-          // la durada d'un pas surt del tempo, no d'una constant
-          const pas = Tone.Time("16n").toSeconds();
-          for (const t of p.tracks) {
-            if (!isAudible(p, t)) continue;
-
-            const nota = t.bass?.[step];
-            if (nota) {
-              kit.triggerNote(
-                t.id,
-                time,
-                [nota.midi],
-                pas * nota.length,
-                nota.accent ? ACCENT_VELOCITY : NORMAL_VELOCITY,
-              );
-              continue;
-            }
-
-            const acord = t.chords?.[step];
-            if (acord) {
-              kit.triggerNote(
-                t.id,
-                time,
-                degreeToChord(p.key, acord.degree, acord.kind).map(
-                  (n) => n + CHORD_BASE_MIDI + acord.octave * 12,
-                ),
-                pas * acord.length,
-                NORMAL_VELOCITY,
-              );
-              continue;
-            }
-
-            const cell = t.steps[step];
-            if (!cell) continue;
-            kit.trigger(
-              t.id,
-              time,
-              cell === 2 ? ACCENT_VELOCITY : NORMAL_VELOCITY,
-            );
-          }
+          triggerStep(
+            kit,
+            patternRef.current,
+            step,
+            time,
+            Tone.Time("16n").toSeconds(),
+          );
           Tone.getDraw().schedule(() => setCurrentStep(step), time);
         },
         indices,
@@ -409,6 +366,22 @@ export function useSequencer() {
     });
   }, []);
 
+  const [exporting, setExporting] = useState(false);
+
+  /**
+   * Exporta el patró a WAV. Carrega Tone si encara no hi és, però no fa
+   * servir el context que sona: Tone.Offline en munta un de propi.
+   */
+  const exportWav = useCallback(async (): Promise<ArrayBuffer | null> => {
+    setExporting(true);
+    try {
+      if (!toneRef.current) toneRef.current = await import("tone");
+      return await renderPattern(toneRef.current, patternRef.current);
+    } finally {
+      setExporting(false);
+    }
+  }, []);
+
   const audition = useCallback(
     async (id: string) => {
       const { Tone, kit } = await ensureAudio();
@@ -448,5 +421,7 @@ export function useSequencer() {
     clearAll,
     randomise,
     audition,
+    exportWav,
+    exporting,
   };
 }

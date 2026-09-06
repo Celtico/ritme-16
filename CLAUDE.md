@@ -119,6 +119,12 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   `voices.ts`. Rep el mòdul Tone per paràmetre, cosa que permet provar-lo amb un Tone
   fals. Res d'aquí no ha de recrear nodes per un canvi de paràmetre.
 - `src/lib/storage.ts` — `localStorage` i la validació del que en surt. Sense React.
+- `src/lib/playback.ts` — `applyTracks` i `triggerStep`: què sona a cada pas. **Ho
+  comparteixen el transport en directe i l'exportació**; si cadascú tingués la seva
+  còpia, el WAV acabaria sonant diferent del que se sent.
+- `src/lib/render.ts` — el renderitzat fora de línia amb `Tone.Offline`.
+- `src/lib/wav.ts` — codificació WAV de 16 bits. Rep qualsevol cosa amb la forma d'un
+  AudioBuffer, i per això es prova sense obrir cap AudioContext.
 
 ## Com treballar
 
@@ -152,6 +158,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   notes previstes i que els acords surten a tres veus al registre bo.
 - La llargada variable està verificada sonant: amb 8 passos el charles obert, que només
   toca al pas 13, dona exactament zero, i tornant a 16 hi torna a ser.
-- Pendent, no fet: exportar a WAV, compartir per URL, el banc de 8 patrons amb follow
-  actions i les escenes.
+- L'exportació a WAV està verificada al navegador: 10,24 s a 124 ppm (els 4 compassos
+  més la cua), estèreo a 48 kHz, capçal correcte, pic 0,845 i cap finestra muda.
+- Pendent, no fet: compartir per URL, el banc de 8 patrons amb follow actions i les
+  escenes.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

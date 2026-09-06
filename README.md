@@ -53,6 +53,11 @@ reverberació i B cap a un retard sincronitzat al tempo. Els dos retorns són le
 dues files del final, amb els seus controls i el seu silenci. A la dreta de cada
 fila hi ha un vúmetre, que només es mou mentre sona el transport.
 
+El botó «Exportar 4 compassos» renderitza el patró fora de línia amb
+`Tone.Offline` i el descarrega en WAV de 16 bits, amb dos segons i mig de cua
+perquè no es talli la reverberació. El silenci i el solitari de cada pista
+s'hi respecten: s'exporta el que sentiries.
+
 Els patrons desats van a `localStorage` d'aquest navegador. Els tres patrons
 d'exemple (`PRESETS`) estan definits al codi.
 
@@ -63,7 +68,10 @@ src/
   lib/pattern.ts       model del patró: pistes, barreja i patrons d'exemple
   lib/voices.ts        una fàbrica per tipus de veu; afegir-ne una és afegir-hi una funció
   lib/kit.ts           registre de cadenes de síntesi, una per pista
-  lib/theory.ts        escales i acords (encara sense connectar)
+  lib/theory.ts        escales, acords i noms de nota
+  lib/playback.ts      què sona a cada pas; ho comparteixen el transport i l'exportació
+  lib/render.ts        renderitzat fora de línia
+  lib/wav.ts           codificació WAV de 16 bits
   lib/storage.ts       desar/carregar amb validació del que ve del navegador
   hooks/useSequencer.ts transport de Tone, seqüència i totes les edicions
   components/          consola, transport, files, panell de so, banc de patrons
@@ -128,5 +136,4 @@ Per canviar el so d'una veu només cal tocar `src/lib/kit.ts`: cada cadena hi
 
 - Longitud de patró variable (8, 16, 32) i polirítmies per pista.
 - Encadenar patrons en una cançó.
-- Exportar a WAV amb `Tone.Offline`.
 - Compartir patrons per URL: el model ja és serialitzable a JSON.

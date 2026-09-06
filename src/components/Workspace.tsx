@@ -303,6 +303,8 @@ export function Workspace() {
             onLoad={seq.loadPattern}
             onClear={seq.clearAll}
             onRandomise={seq.randomise}
+            onExport={seq.exportWav}
+            exporting={seq.exporting}
           />
         </div>
       </div>

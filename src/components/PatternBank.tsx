@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { PRESETS, type Pattern } from "@/lib/pattern";
+import { EXPORT_BARS } from "@/lib/render";
+import { wavFileName } from "@/lib/wav";
 import { loadSaved, persist, type SavedPattern } from "@/lib/storage";
 
 interface Props {
@@ -9,23 +11,28 @@ interface Props {
   onLoad: (p: Pattern) => void;
   onClear: () => void;
   onRandomise: () => void;
+  onExport: () => Promise<ArrayBuffer | null>;
+  exporting: boolean;
 }
 
 function PanelButton({
   children,
   onClick,
   tone = "neutral",
+  disabled,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   tone?: "neutral" | "warm";
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
       className={[
-        "rounded-[3px] border border-ink/30 px-3 py-1.5 text-[13px] transition-colors",
+        "rounded-[3px] border border-ink/30 px-3 py-1.5 text-[13px] transition-colors disabled:cursor-default disabled:opacity-50",
         tone === "warm"
           ? "bg-teal text-on-accent hover:bg-teal/85"
           : "bg-panel-hi text-ink hover:bg-raise",
@@ -41,9 +48,31 @@ export function PatternBank({
   onLoad,
   onClear,
   onRandomise,
+  onExport,
+  exporting,
 }: Props) {
   const [saved, setSaved] = useState<SavedPattern[]>([]);
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  /** Descarrega el WAV. L'URL de l'objecte s'ha d'alliberar, o queda penjada. */
+  const exporta = async () => {
+    setError(null);
+    try {
+      const wav = await onExport();
+      if (!wav) return;
+      const url = URL.createObjectURL(
+        new Blob([wav], { type: "audio/wav" }),
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = wavFileName(pattern.name);
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("No s'ha pogut exportar. Torna-ho a provar.");
+    }
+  };
 
   useEffect(() => {
     setSaved(loadSaved());
@@ -79,6 +108,15 @@ export function PatternBank({
         <span className="mx-1 h-5 w-px bg-ink/20" aria-hidden />
         <PanelButton onClick={onRandomise}>Sortejar</PanelButton>
         <PanelButton onClick={onClear}>Buidar</PanelButton>
+        <span className="mx-1 h-5 w-px bg-ink/20" aria-hidden />
+        <PanelButton onClick={() => void exporta()} disabled={exporting}>
+          {exporting ? "Exportant…" : `Exportar ${EXPORT_BARS} compassos`}
+        </PanelButton>
+        {error ? (
+          <span role="alert" className="text-[12px] text-oxblood">
+            {error}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
