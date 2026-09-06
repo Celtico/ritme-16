@@ -49,7 +49,7 @@ export function Transport({
   const beat = currentStep < 0 ? 0 : Math.floor(currentStep / 4) + 1;
 
   return (
-    <div className="flex h-[52px] items-center gap-4 border-b border-header bg-header pl-3 pr-4 text-on-accent">
+    <div className="flex min-h-[52px] flex-wrap items-center gap-x-4 gap-y-1 border-b border-header bg-header py-1 pl-3 pr-4 text-on-accent">
       <h1 className="font-display text-[15px] tracking-tight">RITME-16</h1>
 
       <button
@@ -74,8 +74,8 @@ export function Transport({
         )}
       </button>
 
-      <div className="flex h-full items-center gap-2">
-        <span className="font-display text-xl leading-none tabular-nums">
+      <div className="flex items-center gap-2">
+        <span className="font-display text-xl leading-tight tabular-nums">
           {bpm}
         </span>
         <span className="text-[10px] text-on-accent/55">ppm</span>
@@ -90,8 +90,8 @@ export function Transport({
         />
       </div>
 
-      <div className="flex h-full items-center gap-2">
-        <span className="font-display text-base leading-none tabular-nums">
+      <div className="flex items-center gap-2">
+        <span className="font-display text-base leading-tight tabular-nums">
           {Math.round(swing * 100)}%
         </span>
         <span className="text-[10px] text-on-accent/55">swing</span>
