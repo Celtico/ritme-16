@@ -15,6 +15,7 @@ percussió sintetitzades en temps real amb Tone.js, sense cap sample. Next.js 15
 | `npm run typecheck` | després de qualsevol canvi a `.ts`/`.tsx` |
 | `npm run lint` | ídem; `next build` també hi falla, o sigui que val més passar-hi abans |
 | `npm test` | tests de `src/lib` amb Vitest; ha de passar abans de tancar res |
+| `npm run test:layout` | comprova amb un Chrome real que res no queda tallat a 2560, 1440, 1024 i 390 px. Cal el `dev` engegat. |
 
 Abans de donar una tasca per acabada, `typecheck`, `lint` i `test` han de passar nets.
 No facis `npm run build` amb el servidor de `dev` engegat: es trepitgen el `.next` i
@@ -61,7 +62,12 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   superfície fosca. Per a això hi ha `--color-header`, i `--color-on-accent` per al text
   que va damunt d'un color saturat.
 - L'app ocupa el viewport sencer i **no es desplaça mai la pàgina**: el desplaçament és
-  sempre d'una regió. Si afegeixes res a l'arrel, comprova-ho a 2560, 1440 i 1024 px.
+  sempre d'una regió. Passa `npm run test:layout` abans de tancar qualsevol canvi visual.
+- A les graelles CSS, les columnes van sempre amb `minmax(0, 1fr)`. Amb `1fr` pelat,
+  la columna pren l'amplada mínima del seu contingut i l'arrel es fa més ampla que el
+  viewport; com que l'arrel és `overflow-hidden`, el que en surt és irrecuperable.
+- Els embolcalls dels panells desplaçables van amb `w-max min-w-full`: així el panell té
+  alguna cosa a desplaçar quan el contingut no hi cap, i s'omple quan sí.
 
 ## On va cada cosa
 

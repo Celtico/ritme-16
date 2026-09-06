@@ -249,7 +249,9 @@ export function Workspace() {
           estret
             ? {
                 gridTemplateColumns: "minmax(0, 1fr)",
-                gridTemplateRows: "minmax(0, 1fr) auto",
+                // la graella és el que s'ha de veure: se li garanteix alçada
+                // encara que la llista i el panell inferior en vulguin més
+                gridTemplateRows: "minmax(180px, 1fr) auto",
               }
             : { gridTemplateColumns: `minmax(0, 1fr) auto ${listWidth}px` }
         }
@@ -308,7 +310,7 @@ export function Workspace() {
           onScroll={() => sincronitza(list.current, grid.current)}
           className={[
             "min-w-0 overflow-auto px-2 pt-2",
-            estret ? "max-h-[45vh] border-t" : "border-l",
+            estret ? "max-h-[28vh] border-t" : "border-l",
             "border-ink/15",
           ].join(" ")}
         >
@@ -367,7 +369,10 @@ export function Workspace() {
       {/* Sense pista seleccionada el panell no ha de reservar 300 px per a
           una frase: es queda a l'alçada del seu contingut. */}
       <div
-        style={{ height: openTrack ? panelHeight : undefined }}
+        style={{
+          height: openTrack ? panelHeight : undefined,
+          maxHeight: estret ? "38vh" : undefined,
+        }}
         className="flex min-h-0 flex-col"
       >
         {openTrack ? (
