@@ -88,6 +88,21 @@ export interface VoiceParams {
 
 export const MAX_LFO = 2;
 export const MAX_MACROS = 4;
+export const MAX_TRACKS = 16;
+
+/** Els vuit colors que pot tenir una pista, tots de globals.css. */
+export const TRACK_COLORS = [
+  "oxblood",
+  "rust",
+  "ochre",
+  "olive",
+  "teal",
+  "slate",
+  "plum",
+  "coffee",
+] as const;
+
+export type TrackColor = (typeof TRACK_COLORS)[number];
 
 export const LFO_SHAPES: LfoShape[] = [
   "sine",

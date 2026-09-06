@@ -22,6 +22,10 @@ npm run dev
 | Obrir els comandaments de so | clic al nom de la veu |
 | Buidar una fila | doble clic al nom de la veu |
 
+El botó «+ Pista» n'afegeix (fins a 16) i el menú ⋯ de cada fila permet
+reanomenar-la, canviar-ne el color, duplicar-la, moure-la o eliminar-la. Les
+tecles 1 a 8 sempre fan sonar les vuit primeres.
+
 Cada fila porta, a més del volum, un panoràmic i dos enviaments: A cap a una
 reverberació i B cap a un retard sincronitzat al tempo. Els dos retorns són les
 dues files del final, amb els seus controls i el seu silenci. A la dreta de cada

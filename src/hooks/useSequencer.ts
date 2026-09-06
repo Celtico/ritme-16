@@ -3,19 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
 import {
-  clonePattern,
-  emptyLane,
+  addTrack as add,
   applyMacroAssignment,
+  clonePattern,
+  duplicateTrack as duplicate,
+  emptyLane,
   isAudible,
   KINDS,
+  moveTrack as move,
   PRESETS,
+  removeTrack as remove,
   STEPS,
   type Cell,
   type ChannelMix,
+  type Macro,
   type Pattern,
   type Returns,
-  type Macro,
   type Track,
+  type VoiceKind,
   type VoiceParams,
 } from "@/lib/pattern";
 
@@ -230,6 +235,56 @@ export function useSequencer() {
     [],
   );
 
+  // --- Gestió de pistes ---------------------------------------------------
+
+  /**
+   * Les operacions que canvien la llista de pistes passen totes per aquí: el
+   * kit ha de saber quines cadenes ha de tenir abans no soni el pas següent.
+   */
+  const restructure = useCallback((next: Pattern, eliminada?: string) => {
+    const kit = kitRef.current;
+    if (kit) {
+      if (eliminada) kit.removeTrack(eliminada);
+      applyTracks(kit, next);
+    }
+    patternRef.current = next;
+    setPattern(next);
+  }, []);
+
+  const addTrack = useCallback(
+    (kind: VoiceKind) => restructure(add(patternRef.current, kind)),
+    [restructure],
+  );
+
+  const duplicateTrack = useCallback(
+    (id: string) => restructure(duplicate(patternRef.current, id)),
+    [restructure],
+  );
+
+  const removeTrack = useCallback(
+    (id: string) => {
+      const next = remove(patternRef.current, id);
+      if (next === patternRef.current) return;
+      restructure(next, id);
+    },
+    [restructure],
+  );
+
+  const moveTrack = useCallback(
+    (id: string, delta: number) => restructure(move(patternRef.current, id, delta)),
+    [restructure],
+  );
+
+  const renameTrack = useCallback(
+    (id: string, name: string) => editTrack(id, (t) => (t.name = name)),
+    [editTrack],
+  );
+
+  const setTrackColor = useCallback(
+    (id: string, color: string) => editTrack(id, (t) => (t.color = color)),
+    [editTrack],
+  );
+
   const setBpm = useCallback((bpm: number) => {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
   }, []);
@@ -294,6 +349,12 @@ export function useSequencer() {
     setMacro,
     setReturns,
     readLevels,
+    addTrack,
+    duplicateTrack,
+    removeTrack,
+    moveTrack,
+    renameTrack,
+    setTrackColor,
     setBpm,
     setSwing,
     loadPattern,

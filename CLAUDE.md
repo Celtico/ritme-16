@@ -31,6 +31,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   l'estat directament des del fil d'àudio.
 - Les cel·les tenen tres valors: `0` silenci, `1` normal, `2` accent. L'accent només
   canvia la velocitat de disparament, res més.
+- Les operacions sobre pistes (afegir, duplicar, moure, eliminar) són funcions pures de
+  `pattern.ts` que retornen un patró nou; el hook només les crida i avisa el kit. Màxim
+  16 pistes, i mai cap patró sense pistes.
 - El patró és una llista de pistes (`Pattern.tracks`), no registres indexats per veu.
   L'ordre de l'array és l'ordre visual i `track.id` és el que lliga la pista amb la seva
   cadena de síntesi.
@@ -58,6 +61,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - `src/components/TrackLane.tsx` — una fila: nom, M/S, volum, panoràmic, els dos
   enviaments, els passos i el vúmetre. Rep un `Track` sencer.
 - `src/components/ReturnRows.tsx` — les dues files de retorn, al final de la llista.
+- `src/components/TrackMenu.tsx`, `AddTrack.tsx` — reanomenar, color, duplicar, moure,
+  eliminar i afegir pistes. L'obertura del menú la governa la consola, no cada menú.
 - `src/components/Meter.tsx` — la barra de 4 px. Rep el nivell ja llegit.
 - `src/components/StepButton.tsx` — una cel·la i el mapa `FACE` d'aparença per valor.
 - `src/components/SoundPanel.tsx` — el panell de so en tres bandes (cadena, fonts de
@@ -116,9 +121,14 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   `ChannelSplitter`). Hi ha uns 125 ms de latència, i si es simulen esdeveniments de
   punter cal deixar-hi una pausa entremig: els oients s'enganxen en un efecte i el primer
   moviment es perd.
+- Gestió de pistes verificada al navegador: duplicar posa la còpia just a sota amb id nou,
+  moure amunt i avall va, reanomenar amb teclat real també, el color canvia la ratlla de
+  la fila, i eliminar demana confirmació només si la pista té passos.
+- Compte provant la interfície des de la consola: els esdeveniments sintètics de React
+  (un `Event('input')` seguit d'un `blur()`) sovint no confirmen un camp de text. Val més
+  escriure-hi de debò amb el teclat.
 - El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
   `Tone.getDraw()` ja programades que arriben després de l'`stop()`. Ve d'abans.
 - Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
-  escenes, les pistes melòdiques (baix i acords) i la gestió de pistes (+ Pista, menú per
-  pista, duplicar, moure, eliminar).
+  escenes i les pistes melòdiques (baix i acords).
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

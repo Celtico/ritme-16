@@ -2,6 +2,7 @@
 
 import { Knob } from "./Knob";
 import { Meter } from "./Meter";
+import { TrackMenu } from "./TrackMenu";
 import { StepButton } from "./StepButton";
 import type { ChannelMix, Track } from "@/lib/pattern";
 
@@ -19,6 +20,7 @@ interface Props {
   soundOpen: boolean;
   /** Nivell del vúmetre, 0..1. */
   level: number;
+  menu: React.ComponentProps<typeof TrackMenu>;
 }
 
 function MiniToggle({
@@ -64,6 +66,7 @@ export function TrackLane({
   onClear,
   soundOpen,
   level,
+  menu,
 }: Props) {
   const { name, steps: cells, mix } = track;
   const escoltar = hotkey ? `Escoltar ${name} (tecla ${hotkey})` : `Escoltar ${name}`;
@@ -76,7 +79,14 @@ export function TrackLane({
         dimmed ? "opacity-45" : "",
       ].join(" ")}
     >
-      <div className="sticky left-0 z-10 flex w-[316px] shrink-0 items-center gap-2 bg-panel pr-2">
+      <div className="sticky left-0 z-10 flex w-[372px] shrink-0 items-center gap-1.5 bg-panel pr-2">
+        {/* la ratlla de color identifica la pista sense tocar els passos,
+            que codifiquen l'estat de la cel·la i no de qui és */}
+        <span
+          aria-hidden
+          style={{ backgroundColor: `var(--color-${track.color})` }}
+          className="h-7 w-[3px] shrink-0 rounded-[1px]"
+        />
         <button
           type="button"
           onClick={onAudition}
@@ -102,6 +112,8 @@ export function TrackLane({
         >
           {name}
         </button>
+
+        <TrackMenu {...menu} />
 
         <MiniToggle
           active={mix.muted}

@@ -4,16 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { PatternBank } from "./PatternBank";
 import { TrackLane } from "./TrackLane";
 import { Transport } from "./Transport";
+import { AddTrack } from "./AddTrack";
 import { ReturnRows } from "./ReturnRows";
 import { SoundPanel } from "./SoundPanel";
 import { useMeters } from "@/hooks/useMeters";
 import { useSequencer } from "@/hooks/useSequencer";
-import { isAudible } from "@/lib/pattern";
+import { isAudible, MAX_TRACKS } from "@/lib/pattern";
 
 function StepRuler({ currentStep }: { currentStep: number }) {
   return (
     <div className="flex items-end gap-3 pb-1" aria-hidden>
-      <div className="w-[316px] shrink-0" />
+      <div className="w-[372px] shrink-0" />
       <div className="flex gap-3">
         {[0, 1, 2, 3].map((g) => (
           <div key={g} className="flex gap-1">
@@ -46,6 +47,8 @@ function StepRuler({ currentStep }: { currentStep: number }) {
 export function Console() {
   const seq = useSequencer();
   const [soundTrack, setSoundTrack] = useState<string | null>(null);
+  // només un menú de pista obert alhora
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const { tracks } = seq.pattern;
   const openTrack = tracks.find((t) => t.id === soundTrack);
   const levels = useMeters(seq.readLevels, seq.isPlaying);
@@ -115,7 +118,7 @@ export function Console() {
         <div className="overflow-x-auto px-4 py-3 sm:px-6">
           <div className="min-w-max">
             <StepRuler currentStep={seq.currentStep} />
-            {tracks.map((track) => (
+            {tracks.map((track, i) => (
               <TrackLane
                 key={track.id}
                 track={track}
@@ -133,8 +136,36 @@ export function Console() {
                 onClear={() => seq.clearLane(track.id)}
                 soundOpen={soundTrack === track.id}
                 level={levels.tracks[track.id] ?? 0}
+                menu={{
+                  track,
+                  first: i === 0,
+                  last: i === tracks.length - 1,
+                  canDuplicate: tracks.length < MAX_TRACKS,
+                  canRemove: tracks.length > 1,
+                  onRename: (name) => seq.renameTrack(track.id, name),
+                  onColor: (color) => seq.setTrackColor(track.id, color),
+                  // moure deixa el menú obert, per poder-ho fer diverses
+                  // vegades; duplicar i eliminar el tanquen, perquè la
+                  // llista ja no és la mateixa
+                  onDuplicate: () => {
+                    seq.duplicateTrack(track.id);
+                    setOpenMenu(null);
+                  },
+                  onMove: (delta) => seq.moveTrack(track.id, delta),
+                  onRemove: () => {
+                    seq.removeTrack(track.id);
+                    setOpenMenu(null);
+                  },
+                  open: openMenu === track.id,
+                  onToggle: (v: boolean) => setOpenMenu(v ? track.id : null),
+                }}
               />
             ))}
+
+            <AddTrack
+              onAdd={seq.addTrack}
+              remaining={MAX_TRACKS - tracks.length}
+            />
 
             <ReturnRows returns={seq.pattern.returns} onChange={seq.setReturns} />
           </div>

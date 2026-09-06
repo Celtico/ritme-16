@@ -17,6 +17,14 @@
   --color-ochre: #c98a2b;
   --color-teal: #23615e;
 
+  /* Colors de pista. Els tres de senyal i cinc més del mateix món: apagats,
+     prou foscos per dur text clar a sobre i distingibles en un quadrat petit. */
+  --color-rust: #a85a2b;
+  --color-olive: #6d7334;
+  --color-slate: #40566b;
+  --color-plum: #6b3a55;
+  --color-coffee: #5c4433;
+
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
 }

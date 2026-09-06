@@ -4,6 +4,7 @@ import {
   defaultParams,
   KINDS,
   MAX_MACROS,
+  MAX_TRACKS,
   VOICE_KINDS,
   type ModTarget,
   type SyncRate,
@@ -16,6 +17,8 @@ export const STEPS = 16;
 export {
   canRoute,
   DECAY_MAX,
+  MAX_TRACKS,
+  TRACK_COLORS,
   DECAY_MIN,
   defaultFilter,
   defaultParams,
@@ -36,6 +39,7 @@ export {
 } from "./voices";
 export type {
   BlockId,
+  TrackColor,
   EnvParams,
   FilterParams,
   FilterType,
@@ -252,6 +256,66 @@ export function clonePattern(p: Pattern): Pattern {
     })),
     returns: { a: { ...p.returns.a }, b: { ...p.returns.b } },
   };
+}
+
+/**
+ * Un id que no xoqui amb cap dels que ja hi ha. Els ids lliguen la pista amb
+ * la seva cadena de síntesi: dues pistes amb el mateix id en compartirien una.
+ */
+export function uniqueTrackId(p: Pattern, base: string): string {
+  const presos = new Set(p.tracks.map((t) => t.id));
+  if (!presos.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const provi = `${base}-${n}`;
+    if (!presos.has(provi)) return provi;
+  }
+}
+
+/** Afegeix una pista del tipus demanat al final. Si ja n'hi ha prou, no fa res. */
+export function addTrack(p: Pattern, kind: VoiceKind): Pattern {
+  if (p.tracks.length >= MAX_TRACKS) return p;
+  const next = clonePattern(p);
+  next.tracks.push(makeTrack(kind, uniqueTrackId(next, kind)));
+  return next;
+}
+
+/** Copia una pista sencera, passos i so inclosos, just a sota de l'original. */
+export function duplicateTrack(p: Pattern, id: string): Pattern {
+  if (p.tracks.length >= MAX_TRACKS) return p;
+  const i = p.tracks.findIndex((t) => t.id === id);
+  if (i < 0) return p;
+  const next = clonePattern(p);
+  const copia = cloneTrack(next.tracks[i]);
+  copia.id = uniqueTrackId(next, id);
+  copia.name = `${next.tracks[i].name} (còpia)`;
+  next.tracks.splice(i + 1, 0, copia);
+  return next;
+}
+
+/** Treu una pista. Mai no en deixa cap patró sense pistes. */
+export function removeTrack(p: Pattern, id: string): Pattern {
+  if (p.tracks.length <= 1) return p;
+  if (!p.tracks.some((t) => t.id === id)) return p;
+  const next = clonePattern(p);
+  next.tracks = next.tracks.filter((t) => t.id !== id);
+  // els macros que hi apuntaven es queden orfes
+  next.macros = next.macros.map((m) => ({
+    ...m,
+    assignments: m.assignments.filter((a) => a.trackId !== id),
+  }));
+  return next;
+}
+
+/** Mou una pista amunt (-1) o avall (+1). Als extrems, es queda on és. */
+export function moveTrack(p: Pattern, id: string, delta: number): Pattern {
+  const i = p.tracks.findIndex((t) => t.id === id);
+  if (i < 0) return p;
+  const j = i + delta;
+  if (j < 0 || j >= p.tracks.length) return p;
+  const next = clonePattern(p);
+  const [moguda] = next.tracks.splice(i, 1);
+  next.tracks.splice(j, 0, moguda);
+  return next;
 }
 
 export function findTrack(p: Pattern, id: string): Track | undefined {
