@@ -5,6 +5,8 @@ import {
   emptyPattern,
   MAX_TRACKS,
   moveTrack,
+  noteCovering,
+  placeNote,
   removeTrack,
   TRACK_COLORS,
   uniqueTrackId,
@@ -157,5 +159,61 @@ describe("ids i colors", () => {
       expect(TRACK_COLORS as readonly string[], t.kind).toContain(t.color);
     }
     expect(VOICE_KINDS.length).toBe(10);
+  });
+});
+
+describe("col·locar notes en una fila melòdica", () => {
+  const buida = () => Array<{ length: number; midi: number } | null>(16).fill(null);
+  const nota = (midi: number, length: number) => ({ midi, length });
+
+  it("posa la nota i la deixa on toca", () => {
+    const f = placeNote(buida(), 3, nota(60, 2), 4);
+    expect(f[3]).toEqual({ midi: 60, length: 2 });
+    expect(f.filter(Boolean)).toHaveLength(1);
+  });
+
+  it("escurça la nota si topa amb la següent", () => {
+    let f = placeNote(buida(), 6, nota(64, 2), 4);
+    f = placeNote(f, 4, nota(60, 4), 4);
+    expect(f[4]).toEqual({ midi: 60, length: 2 });
+    expect(f[6]).toEqual({ midi: 64, length: 2 });
+  });
+
+  it("no deixa que cap nota surti del compàs", () => {
+    const f = placeNote(buida(), 14, nota(60, 4), 4);
+    expect(f[14]!.length).toBe(2);
+  });
+
+  it("respecta el màxim de llargada", () => {
+    const f = placeNote(buida(), 0, nota(60, 99), 4);
+    expect(f[0]!.length).toBe(4);
+  });
+
+  it("substitueix la nota que ja cobria aquell pas", () => {
+    let f = placeNote(buida(), 2, nota(60, 4), 4);
+    f = placeNote(f, 4, nota(67, 2), 4);
+    // la de tres passos cobria el 4, o sigui que se'n va
+    expect(f[2]).toBeNull();
+    expect(f[4]).toEqual({ midi: 67, length: 2 });
+  });
+
+  it("treu la nota quan se li passa null", () => {
+    let f = placeNote(buida(), 5, nota(60, 3), 4);
+    f = placeNote(f, 6, null, 4);
+    expect(f.filter(Boolean)).toHaveLength(0);
+  });
+
+  it("no toca la fila original", () => {
+    const f = buida();
+    placeNote(f, 0, nota(60, 2), 4);
+    expect(f[0]).toBeNull();
+  });
+
+  it("diu quina nota cobreix cada pas", () => {
+    const f = placeNote(buida(), 4, nota(60, 3), 4);
+    expect(noteCovering(f, 3)).toBeNull();
+    expect(noteCovering(f, 4)?.start).toBe(4);
+    expect(noteCovering(f, 6)?.start).toBe(4);
+    expect(noteCovering(f, 7)).toBeNull();
   });
 });

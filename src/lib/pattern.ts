@@ -380,6 +380,55 @@ export function moveTrack(p: Pattern, id: string, delta: number): Pattern {
   return next;
 }
 
+/**
+ * Col·loca una nota en una fila melòdica. Una nota cobreix els passos de
+ * darrere seu, així que abans esborra el que hi hagi a sota i, si topa amb la
+ * següent, s'escurça per no trepitjar-la.
+ */
+export function placeNote<T extends { length: number }>(
+  fila: (T | null)[],
+  index: number,
+  nota: T | null,
+  maxLength: number,
+): (T | null)[] {
+  const out = [...fila];
+  if (index < 0 || index >= out.length) return out;
+
+  // treu la nota que ja cobrís aquest pas
+  for (let i = index; i >= 0; i--) {
+    const n = out[i];
+    if (n) {
+      if (i + n.length > index) out[i] = null;
+      break;
+    }
+  }
+
+  if (!nota) return out;
+
+  let length = Math.max(1, Math.min(maxLength, nota.length));
+  for (let j = index + 1; j < Math.min(index + length, out.length); j++) {
+    if (out[j]) {
+      length = j - index;
+      break;
+    }
+  }
+  length = Math.min(length, out.length - index);
+  out[index] = { ...nota, length };
+  return out;
+}
+
+/** Quina nota cobreix aquest pas, si n'hi ha cap. */
+export function noteCovering<T extends { length: number }>(
+  fila: (T | null)[],
+  index: number,
+): { start: number; note: T } | null {
+  for (let i = index; i >= 0; i--) {
+    const n = fila[i];
+    if (n) return i + n.length > index ? { start: i, note: n } : null;
+  }
+  return null;
+}
+
 export function findTrack(p: Pattern, id: string): Track | undefined {
   return p.tracks.find((t) => t.id === id);
 }

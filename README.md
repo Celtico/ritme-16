@@ -22,6 +22,24 @@ npm run dev
 | Obrir els comandaments de so | clic al nom de la veu |
 | Buidar una fila | doble clic al nom de la veu |
 
+Sota les vuit files de percussió hi ha dues pistes melòdiques, Baix i Acords,
+que segueixen la tonalitat del transport. Al baix, cada cel·la mostra el nom
+de la nota en notació llatina; als acords, el grau en numeració romana, en
+majúscules o minúscules segons si l'acord surt major o menor. Una nota llarga
+s'estén sobre les cel·les que cobreix.
+
+| Acció a les files melòdiques | Com |
+| --- | --- |
+| Posar una nota | clic a una cel·la buida |
+| Escollir-la per teclat | tecles Q a I = graus de l'escala |
+| Canviar d'octava al selector | fletxes amunt i avall |
+| Allargar la nota | la nansa de la vora dreta |
+| Accentuar (només el baix) | majúscules + clic |
+| Treure-la | clic a sobre |
+
+Canviar la tonalitat no toca les notes del baix, que són absolutes, però sí
+que canvia com sonen els acords, que són graus.
+
 El botó «+ Pista» n'afegeix (fins a 16) i el menú ⋯ de cada fila permet
 reanomenar-la, canviar-ne el color, duplicar-la, moure-la o eliminar-la. Les
 tecles 1 a 8 sempre fan sonar les vuit primeres.

@@ -5,19 +5,25 @@ import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
 import {
   addTrack as add,
   applyMacroAssignment,
+  BASS_MAX_LENGTH,
   CHORD_BASE_MIDI,
+  CHORD_MAX_LENGTH,
   clonePattern,
   degreeToChord,
   duplicateTrack as duplicate,
   emptyLane,
   isAudible,
   KINDS,
+  placeNote,
   moveTrack as move,
   PRESETS,
   removeTrack as remove,
   STEPS,
+  type BassNote,
   type Cell,
   type ChannelMix,
+  type ChordNote,
+  type Key,
   type Macro,
   type Pattern,
   type Returns,
@@ -317,6 +323,30 @@ export function useSequencer() {
     [editTrack],
   );
 
+  // --- Edició melòdica ----------------------------------------------------
+
+  const setKey = useCallback((key: Key) => {
+    setPattern((prev) => ({ ...clonePattern(prev), key }));
+  }, []);
+
+  const setBassNote = useCallback(
+    (id: string, index: number, note: BassNote | null) =>
+      editTrack(id, (t) => {
+        if (t.bass) t.bass = placeNote(t.bass, index, note, BASS_MAX_LENGTH);
+      }),
+    [editTrack],
+  );
+
+  const setChordNote = useCallback(
+    (id: string, index: number, chord: ChordNote | null) =>
+      editTrack(id, (t) => {
+        if (t.chords) {
+          t.chords = placeNote(t.chords, index, chord, CHORD_MAX_LENGTH);
+        }
+      }),
+    [editTrack],
+  );
+
   const setBpm = useCallback((bpm: number) => {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
   }, []);
@@ -378,6 +408,9 @@ export function useSequencer() {
     clearLane,
     setChannel,
     setSound,
+    setKey,
+    setBassNote,
+    setChordNote,
     setMacro,
     setReturns,
     readLevels,

@@ -1,6 +1,12 @@
 "use client";
 
 import type { Theme } from "@/lib/theme";
+import {
+  MODE_NAMES,
+  pitchClassName,
+  type Key,
+  type Mode,
+} from "@/lib/pattern";
 
 interface Props {
   theme: Theme;
@@ -9,6 +15,10 @@ interface Props {
   bpm: number;
   swing: number;
   currentStep: number;
+  patternKey: Key;
+  onKey: (key: Key) => void;
+  snap: boolean;
+  onSnap: (v: boolean) => void;
   onToggle: () => void;
   onBpm: (bpm: number) => void;
   onSwing: (swing: number) => void;
@@ -22,6 +32,10 @@ export function Transport({
   bpm,
   swing,
   currentStep,
+  patternKey,
+  onKey,
+  snap,
+  onSnap,
   onToggle,
   onBpm,
   onSwing,
@@ -85,6 +99,49 @@ export function Transport({
           onChange={(e) => onSwing(Number(e.target.value))}
           className="w-20"
         />
+      </div>
+
+      <div className="flex items-center gap-1">
+        <select
+          value={patternKey.root}
+          aria-label="Fonamental"
+          onChange={(e) => onKey({ ...patternKey, root: Number(e.target.value) })}
+          className="rounded-[3px] border border-on-accent/30 bg-header px-1 py-0.5 text-[12px] text-on-accent"
+        >
+          {Array.from({ length: 12 }, (_, i) => (
+            <option key={i} value={i}>
+              {pitchClassName(i)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={patternKey.mode}
+          aria-label="Mode"
+          onChange={(e) =>
+            onKey({ ...patternKey, mode: e.target.value as Mode })
+          }
+          className="rounded-[3px] border border-on-accent/30 bg-header px-1 py-0.5 text-[12px] text-on-accent"
+        >
+          {(Object.keys(MODE_NAMES) as Mode[]).map((m) => (
+            <option key={m} value={m}>
+              {MODE_NAMES[m]}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          aria-pressed={snap}
+          onClick={() => onSnap(!snap)}
+          title="Ajusta a l'escala les notes que hi triïs"
+          className={[
+            "rounded-[3px] border px-1.5 py-0.5 text-[11px] transition-colors",
+            snap
+              ? "border-ochre bg-ochre text-on-accent"
+              : "border-on-accent/30 text-on-accent/70 hover:bg-on-accent/15",
+          ].join(" ")}
+        >
+          escala
+        </button>
       </div>
 
       <button

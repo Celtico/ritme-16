@@ -5,6 +5,7 @@ import { AddTrack } from "./AddTrack";
 import { PatternBank } from "./PatternBank";
 import { ReturnRows } from "./ReturnRows";
 import { SoundPanel } from "./SoundPanel";
+import { MelodyRow } from "./MelodyRow";
 import { StepRow } from "./StepRow";
 import { StepRuler } from "./StepRuler";
 import { TrackRow } from "./TrackRow";
@@ -20,7 +21,7 @@ import {
 import { useMeters } from "@/hooks/useMeters";
 import { useSequencer } from "@/hooks/useSequencer";
 import { useTheme } from "@/hooks/useTheme";
-import { isAudible, MAX_TRACKS } from "@/lib/pattern";
+import { isAudible, isMelodic, MAX_TRACKS } from "@/lib/pattern";
 
 /** Divisor arrossegable. `axis` diu si mou amplada o alçada. */
 function Divider({
@@ -78,6 +79,7 @@ export function Workspace() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [listWidth, setListWidth] = useState(LIST_WIDTH);
   const [panelHeight, setPanelHeight] = useState(PANEL_HEIGHT);
+  const [snap, setSnap] = useState(true);
 
   const { tracks } = seq.pattern;
   const openTrack = tracks.find((t) => t.id === soundTrack);
@@ -146,6 +148,10 @@ export function Workspace() {
         bpm={seq.pattern.bpm}
         swing={seq.pattern.swing}
         currentStep={seq.currentStep}
+        patternKey={seq.pattern.key}
+        onKey={seq.setKey}
+        snap={snap}
+        onSnap={setSnap}
         onToggle={seq.toggleTransport}
         onBpm={seq.setBpm}
         onSwing={seq.setSwing}
@@ -163,17 +169,30 @@ export function Workspace() {
         >
           <div className="min-w-[420px]">
             <StepRuler currentStep={seq.currentStep} />
-            {tracks.map((track) => (
-              <StepRow
-                key={track.id}
-                track={track}
-                currentStep={seq.currentStep}
-                dimmed={!isAudible(seq.pattern, track)}
-                onToggleStep={(index, accent) =>
-                  seq.toggleStep(track.id, index, accent)
-                }
-              />
-            ))}
+            {tracks.map((track) =>
+              isMelodic(track.kind) ? (
+                <MelodyRow
+                  key={track.id}
+                  track={track}
+                  patternKey={seq.pattern.key}
+                  currentStep={seq.currentStep}
+                  dimmed={!isAudible(seq.pattern, track)}
+                  snap={snap}
+                  onBass={(i, n) => seq.setBassNote(track.id, i, n)}
+                  onChord={(i, c) => seq.setChordNote(track.id, i, c)}
+                />
+              ) : (
+                <StepRow
+                  key={track.id}
+                  track={track}
+                  currentStep={seq.currentStep}
+                  dimmed={!isAudible(seq.pattern, track)}
+                  onToggleStep={(index, accent) =>
+                    seq.toggleStep(track.id, index, accent)
+                  }
+                />
+              ),
+            )}
           </div>
         </div>
 

@@ -77,6 +77,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   desalineen**: la fila 8 d'una banda ha de caure al mateix píxel que la de l'altra.
 - `src/components/StepRow.tsx` / `StepRuler.tsx` — els setze passos d'una pista i els
   seus números. Comparteixen classes d'amplada; la regla no en té cap d'escrita a mà.
+- `src/components/MelodyRow.tsx` — la fila del baix i la dels acords. Una nota s'estén
+  sobre les cel·les que cobreix: no es dibuixen cel·les repetides.
+- `src/components/NotePicker.tsx` / `ChordPicker.tsx` — els selectors flotants.
 - `src/components/TrackRow.tsx` — una fila de la llista de pistes: tot el que no són
   passos. Alçada idèntica a la d'una fila de la graella.
 - `src/components/Transport.tsx` — títol, play/stop, tempo, swing i llums de compàs, tot
@@ -102,7 +105,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - `src/lib/voices.ts` — una fàbrica per tipus de veu i la taula `KINDS` (nom, color,
   nivell, densitat). **Afegir una veu nova és afegir-hi una entrada i una fàbrica**: cap
   altre fitxer no ha de tenir tipus de veu escrits a mà.
-- `src/lib/theory.ts` — escales, acords i noms de nota. Encara no hi ha res connectat.
+- `src/lib/theory.ts` — escales, acords per grau, ajust a l'escala i noms de nota en
+  notació llatina. El fa servir el seqüenciador per resoldre els acords.
 - `src/lib/filter.ts` — la resposta en freqüència dels biquads, per dibuixar-la. Fórmules
   del RBJ Cookbook, provades contra punts coneguts.
 - `src/lib/kit.ts` — un registre de cadenes per `track.id`: `ensureTrack`, `removeTrack`,
@@ -139,6 +143,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   estan verificats; una modulació d'LFO sonant i `Env Amp → tall`, no.
 - El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
   `Tone.getDraw()` ja programades que arriben després de l'`stop()`.
-- Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
-  escenes i les pistes melòdiques (baix i acords).
+- El baix i els acords sonen i s'editen; verificat al navegador que el baix toca les
+  notes previstes i que els acords surten a tres veus al registre bo.
+- Pendent, no fet: llargada de patró variable (STEPS segueix sent una constant),
+  exportar a WAV, compartir per URL, el banc de 8 patrons amb follow actions i les
+  escenes.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.
