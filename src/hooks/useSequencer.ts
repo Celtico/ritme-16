@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createKit, type DrumKit } from "@/lib/kit";
+import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
 import {
   clonePattern,
   emptyLane,
@@ -13,6 +13,7 @@ import {
   type Cell,
   type ChannelMix,
   type Pattern,
+  type Returns,
   type Macro,
   type Track,
   type VoiceParams,
@@ -26,13 +27,15 @@ type StepSequence = import("tone").Sequence<number>;
 const ACCENT_VELOCITY = 1;
 const NORMAL_VELOCITY = 0.6;
 
-/** Aboca al kit tot el que el patró diu de cada pista. */
+/** Aboca al kit tot el que el patró diu de cada pista i dels retorns. */
 function applyTracks(kit: DrumKit, p: Pattern) {
   for (const t of p.tracks) {
     kit.ensureTrack(t.id, t.kind);
     kit.setVolume(t.id, t.mix.volume);
     kit.setParams(t.id, t.sound);
+    kit.setRouting(t.id, t.mix);
   }
+  kit.setReturns(p.returns);
 }
 
 export function useSequencer() {
@@ -173,13 +176,27 @@ export function useSequencer() {
 
   const setChannel = useCallback(
     (id: string, changes: Partial<ChannelMix>) => {
-      if (changes.volume !== undefined) {
-        kitRef.current?.setVolume(id, changes.volume);
-      }
-      editTrack(id, (t) => (t.mix = { ...t.mix, ...changes }));
+      const previ = patternRef.current.tracks.find((t) => t.id === id);
+      if (!previ) return;
+      const mix = { ...previ.mix, ...changes };
+      // el kit ho ha de sentir ara, no al proper render
+      if (changes.volume !== undefined) kitRef.current?.setVolume(id, mix.volume);
+      kitRef.current?.setRouting(id, mix);
+      editTrack(id, (t) => (t.mix = mix));
     },
     [editTrack],
   );
+
+  const setReturns = useCallback((changes: Partial<Returns>) => {
+    const next = { ...patternRef.current.returns, ...changes };
+    kitRef.current?.setReturns(next);
+    setPattern((prev) => ({ ...clonePattern(prev), returns: next }));
+  }, []);
+
+  /** El bucle de dibuix dels vúmetres els llegeix tots d'un sol cop. */
+  const readLevels = useCallback((): TrackLevels | null => {
+    return kitRef.current?.levels() ?? null;
+  }, []);
 
   const setSound = useCallback(
     (id: string, changes: Partial<VoiceParams>) => {
@@ -275,6 +292,8 @@ export function useSequencer() {
     setChannel,
     setSound,
     setMacro,
+    setReturns,
+    readLevels,
     setBpm,
     setSwing,
     loadPattern,

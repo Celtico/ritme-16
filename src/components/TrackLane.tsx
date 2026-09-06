@@ -1,5 +1,7 @@
 "use client";
 
+import { Knob } from "./Knob";
+import { Meter } from "./Meter";
 import { StepButton } from "./StepButton";
 import type { ChannelMix, Track } from "@/lib/pattern";
 
@@ -15,6 +17,8 @@ interface Props {
   onOpenSound: () => void;
   onClear: () => void;
   soundOpen: boolean;
+  /** Nivell del vúmetre, 0..1. */
+  level: number;
 }
 
 function MiniToggle({
@@ -59,6 +63,7 @@ export function TrackLane({
   onOpenSound,
   onClear,
   soundOpen,
+  level,
 }: Props) {
   const { name, steps: cells, mix } = track;
   const escoltar = hotkey ? `Escoltar ${name} (tecla ${hotkey})` : `Escoltar ${name}`;
@@ -71,7 +76,7 @@ export function TrackLane({
         dimmed ? "opacity-45" : "",
       ].join(" ")}
     >
-      <div className="sticky left-0 z-10 flex w-[222px] shrink-0 items-center gap-2 bg-panel pr-2">
+      <div className="sticky left-0 z-10 flex w-[316px] shrink-0 items-center gap-2 bg-panel pr-2">
         <button
           type="button"
           onClick={onAudition}
@@ -123,6 +128,45 @@ export function TrackLane({
           onChange={(e) => onChangeMix({ volume: Number(e.target.value) })}
           className="w-12"
         />
+
+        <Knob
+          hideLabel
+          label={`Panoràmic de ${name}`}
+          size={26}
+          value={mix.pan}
+          min={-1}
+          max={1}
+          step={0.02}
+          bipolar
+          format={(v) =>
+            v === 0
+              ? "centre"
+              : `${Math.abs(Math.round(v * 100))} % ${v < 0 ? "esq." : "dre."}`
+          }
+          onChange={(pan) => onChangeMix({ pan })}
+        />
+        <Knob
+          hideLabel
+          label={`Enviament de ${name} al retorn A, reverb`}
+          size={26}
+          value={mix.sendA}
+          min={0}
+          max={1}
+          step={0.01}
+          format={(v) => `A ${Math.round(v * 100)} %`}
+          onChange={(sendA) => onChangeMix({ sendA })}
+        />
+        <Knob
+          hideLabel
+          label={`Enviament de ${name} al retorn B, retard`}
+          size={26}
+          value={mix.sendB}
+          min={0}
+          max={1}
+          step={0.01}
+          format={(v) => `B ${Math.round(v * 100)} %`}
+          onChange={(sendB) => onChangeMix({ sendB })}
+        />
       </div>
 
       <div className="flex gap-3">
@@ -144,6 +188,8 @@ export function TrackLane({
           </div>
         ))}
       </div>
+
+      <Meter level={level} label={`Nivell de ${name}`} />
     </div>
   );
 }

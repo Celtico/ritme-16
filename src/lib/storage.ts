@@ -4,6 +4,7 @@ import {
   defaultMacros,
   defaultMix,
   defaultParams,
+  defaultReturns,
   defaultTracks,
   emptyLane,
   emptyPattern,
@@ -24,6 +25,7 @@ import {
   type ModSource,
   type ModTarget,
   type Pattern,
+  type Returns,
   type SyncRate,
   type Track,
   type VoiceKind,
@@ -74,6 +76,10 @@ function normaliseSteps(cells: unknown): Cell[] {
   return out;
 }
 
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, v));
+
+/** Els patrons anteriors als enviaments no porten pan ni sends: hi van a zero. */
 function normaliseMix(mix: unknown): ChannelMix {
   const base = defaultMix();
   if (!isObject(mix)) return base;
@@ -81,6 +87,31 @@ function normaliseMix(mix: unknown): ChannelMix {
     volume: typeof mix.volume === "number" ? mix.volume : base.volume,
     muted: mix.muted === true,
     solo: mix.solo === true,
+    pan: clamp(num(mix.pan, base.pan), -1, 1),
+    sendA: clamp(num(mix.sendA, base.sendA), 0, 1),
+    sendB: clamp(num(mix.sendB, base.sendB), 0, 1),
+  };
+}
+
+function normaliseReturns(raw: unknown): Returns {
+  const base = defaultReturns();
+  if (!isObject(raw)) return base;
+  const a = isObject(raw.a) ? raw.a : {};
+  const b = isObject(raw.b) ? raw.b : {};
+  return {
+    a: {
+      decay: clamp(num(a.decay, base.a.decay), 0.2, 8),
+      wet: clamp(num(a.wet, base.a.wet), 0, 1),
+      muted: a.muted === true,
+    },
+    b: {
+      time: SYNC_RATES.includes(b.time as SyncRate)
+        ? (b.time as SyncRate)
+        : base.b.time,
+      feedback: clamp(num(b.feedback, base.b.feedback), 0, 0.9),
+      wet: clamp(num(b.wet, base.b.wet), 0, 1),
+      muted: b.muted === true,
+    },
   };
 }
 
@@ -232,6 +263,7 @@ function fromLegacy(old: LegacyPattern): Pattern {
       sound: normaliseSound(kind, old.sound?.[kind]),
     })),
     macros: defaultMacros(),
+    returns: defaultReturns(),
   };
 }
 
@@ -275,6 +307,7 @@ export function normalise(value: unknown): Pattern {
       swing: typeof value.swing === "number" ? value.swing : 0,
       tracks: tracks.length > 0 ? tracks : defaultTracks(),
       macros: normaliseMacros(value.macros),
+      returns: normaliseReturns(value.returns),
     };
   }
 

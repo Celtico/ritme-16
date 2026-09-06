@@ -4,14 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { PatternBank } from "./PatternBank";
 import { TrackLane } from "./TrackLane";
 import { Transport } from "./Transport";
+import { ReturnRows } from "./ReturnRows";
 import { SoundPanel } from "./SoundPanel";
+import { useMeters } from "@/hooks/useMeters";
 import { useSequencer } from "@/hooks/useSequencer";
 import { isAudible } from "@/lib/pattern";
 
 function StepRuler({ currentStep }: { currentStep: number }) {
   return (
     <div className="flex items-end gap-3 pb-1" aria-hidden>
-      <div className="w-[222px] shrink-0" />
+      <div className="w-[316px] shrink-0" />
       <div className="flex gap-3">
         {[0, 1, 2, 3].map((g) => (
           <div key={g} className="flex gap-1">
@@ -46,6 +48,7 @@ export function Console() {
   const [soundTrack, setSoundTrack] = useState<string | null>(null);
   const { tracks } = seq.pattern;
   const openTrack = tracks.find((t) => t.id === soundTrack);
+  const levels = useMeters(seq.readLevels, seq.isPlaying);
 
   // Les vuit primeres pistes reben les tecles 1-8, en ordre.
   const hotkeys = new Map(tracks.slice(0, 8).map((t, i) => [t.id, String(i + 1)]));
@@ -90,7 +93,7 @@ export function Console() {
   }, [toggleTransport, audition]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-3 py-6 sm:px-6 sm:py-12">
+    <div className="mx-auto w-full max-w-6xl px-3 py-6 sm:px-6 sm:py-12">
       <div className="overflow-hidden rounded-lg border border-ink/50 bg-panel text-ink shadow-[0_24px_60px_-20px_rgba(0,0,0,0.75)]">
         <header className="flex items-baseline justify-between gap-4 bg-ink px-4 py-3 text-panel-hi sm:px-6">
           <h1 className="font-display text-xl tracking-tight">RITME-16</h1>
@@ -129,8 +132,11 @@ export function Console() {
                 }
                 onClear={() => seq.clearLane(track.id)}
                 soundOpen={soundTrack === track.id}
+                level={levels.tracks[track.id] ?? 0}
               />
             ))}
+
+            <ReturnRows returns={seq.pattern.returns} onChange={seq.setReturns} />
           </div>
         </div>
 

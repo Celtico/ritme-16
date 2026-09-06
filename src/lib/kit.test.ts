@@ -70,6 +70,23 @@ function toneFals(reg: Registre) {
       }
     },
     Scale: class { constructor() { return node({ min: 0, max: 0 }); } },
+    Panner: class { constructor() { return node({ pan: { value: 0 } }); } },
+    Gain: class { constructor() { return node({ gain: { value: 0 } }); } },
+    Meter: class { constructor() { return node({ getValue: () => 0 }); } },
+    Reverb: class {
+      constructor() {
+        return node({ decay: 2.2, wet: { value: 1 }, generate: async () => {} });
+      }
+    },
+    FeedbackDelay: class {
+      constructor() {
+        return node({
+          delayTime: { value: "8n." },
+          feedback: { value: 0 },
+          wet: { value: 1 },
+        });
+      }
+    },
     Time: (v: unknown) => ({ toSeconds: () => 0.5, valueOf: () => v }),
     getTransport: () => ({ seconds: 0 }),
     LFO: class {
@@ -178,5 +195,49 @@ describe("registre de pistes del kit", () => {
     kit.ensureTrack("charles", "charles");
     kit.trigger("charles", 0, 1);
     expect(reg.disparats).toEqual(["soroll"]);
+  });
+});
+
+describe("panoràmic, enviaments i retorns", () => {
+  const mix = {
+    volume: 0,
+    muted: false,
+    solo: false,
+    pan: 0,
+    sendA: 0,
+    sendB: 0,
+  };
+
+  it("no peta en encaminar una pista que no existeix", () => {
+    const kit = createKit(toneFals(nouRegistre()));
+    expect(() => kit.setRouting("fantasma", mix)).not.toThrow();
+  });
+
+  it("reté el panoràmic i els enviaments dins dels seus marges", () => {
+    const kit = createKit(toneFals(nouRegistre()));
+    kit.ensureTrack("a", "bombo");
+    expect(() =>
+      kit.setRouting("a", { ...mix, pan: -9, sendA: 4, sendB: -2 }),
+    ).not.toThrow();
+    expect(() => kit.setReturns({
+      a: { decay: 99, wet: 2, muted: false },
+      b: { time: "8n", feedback: 5, wet: 1, muted: false },
+    })).not.toThrow();
+  });
+
+  it("dona un nivell per pista i un del master", () => {
+    const kit = createKit(toneFals(nouRegistre()));
+    kit.ensureTrack("a", "bombo");
+    kit.ensureTrack("b", "caixa");
+    const l = kit.levels();
+    expect(Object.keys(l.tracks).sort()).toEqual(["a", "b"]);
+    expect(typeof l.master).toBe("number");
+  });
+
+  it("treu del vúmetre les pistes eliminades", () => {
+    const kit = createKit(toneFals(nouRegistre()));
+    kit.ensureTrack("a", "bombo");
+    kit.removeTrack("a");
+    expect(Object.keys(kit.levels().tracks)).toEqual([]);
   });
 });

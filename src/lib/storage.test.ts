@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  defaultMix,
   defaultParams,
+  defaultReturns,
   emptyPattern,
   KINDS,
   lane,
@@ -45,7 +47,14 @@ describe("migració del model antic", () => {
     const p = normalise(patroAntic());
     const bombo = p.tracks.find((t) => t.id === "bombo")!;
     expect(bombo.steps).toEqual(lane("X...x...X...x..."));
-    expect(bombo.mix).toEqual({ volume: -3, muted: false, solo: true });
+    expect(bombo.mix).toEqual({
+      volume: -3,
+      muted: false,
+      solo: true,
+      pan: 0,
+      sendA: 0,
+      sendB: 0,
+    });
     expect(p.tracks.find((t) => t.id === "caixa")!.mix.muted).toBe(true);
   });
 
@@ -54,7 +63,7 @@ describe("migració del model antic", () => {
     const aro = p.tracks.find((t) => t.id === "aro")!;
     expect(aro.steps).toHaveLength(16);
     expect(aro.steps.every((c) => c === 0)).toBe(true);
-    expect(aro.mix).toEqual({ volume: 0, muted: false, solo: false });
+    expect(aro.mix).toEqual(defaultMix());
   });
 
   it("posa els comandaments de fàbrica als patrons anteriors al kit editable", () => {
@@ -71,6 +80,61 @@ describe("migració del model antic", () => {
     expect(bombo.sound.pitch).toBe(-5);
     expect(bombo.sound.drive).toBe(0);
     expect(bombo.sound.decay).toBe(KINDS.bombo.decay);
+  });
+});
+
+describe("enviaments, panoràmic i retorns", () => {
+  it("posa pan i sends a zero als patrons que no en portaven", () => {
+    const p = normalise(patroAntic());
+    for (const t of p.tracks) {
+      expect(t.mix.pan, t.id).toBe(0);
+      expect(t.mix.sendA, t.id).toBe(0);
+      expect(t.mix.sendB, t.id).toBe(0);
+    }
+  });
+
+  it("dona els retorns de fàbrica als patrons que no en tenien", () => {
+    expect(normalise(patroAntic()).returns).toEqual(defaultReturns());
+  });
+
+  it("conserva els retorns desats", () => {
+    const p = emptyPattern("Amb retorns");
+    p.returns.a.decay = 5;
+    p.returns.b.time = "4n";
+    p.returns.b.muted = true;
+    const out = normalise(p);
+    expect(out.returns.a.decay).toBe(5);
+    expect(out.returns.b.time).toBe("4n");
+    expect(out.returns.b.muted).toBe(true);
+  });
+
+  it("reté els valors dins dels seus marges", () => {
+    const brut = {
+      ...emptyPattern(),
+      returns: {
+        a: { decay: 999, wet: 5, muted: false },
+        b: { time: "brossa", feedback: 3, wet: -2, muted: false },
+      },
+    };
+    const r = normalise(brut).returns;
+    expect(r.a.decay).toBe(8);
+    expect(r.a.wet).toBe(1);
+    // un realimentat per damunt de 0,9 no s'apagaria mai
+    expect(r.b.feedback).toBe(0.9);
+    expect(r.b.wet).toBe(0);
+    expect(r.b.time).toBe("8n");
+  });
+
+  it("reté el panoràmic i els enviaments", () => {
+    const p = emptyPattern();
+    const brut = {
+      ...p,
+      tracks: [{ ...p.tracks[0], mix: { volume: 0, pan: -9, sendA: 4, sendB: -1 } }],
+    };
+    const mix = normalise(brut).tracks[0].mix;
+    expect(mix.pan).toBe(-1);
+    expect(mix.sendA).toBe(1);
+    expect(mix.sendB).toBe(0);
   });
 });
 

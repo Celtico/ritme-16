@@ -6,6 +6,7 @@ import {
   MAX_MACROS,
   VOICE_KINDS,
   type ModTarget,
+  type SyncRate,
   type VoiceKind,
   type VoiceParams,
 } from "./voices";
@@ -55,6 +56,42 @@ export interface ChannelMix {
   volume: number; // dB, de -32 a +6
   muted: boolean;
   solo: boolean;
+  /** -1 tot a l'esquerra, 0 al centre, 1 tot a la dreta. */
+  pan: number;
+  /** 0..1 cap al retorn A (reverb). */
+  sendA: number;
+  /** 0..1 cap al retorn B (retard). */
+  sendB: number;
+}
+
+/** El retorn A: una reverberació. */
+export interface ReverbReturn {
+  /** Segons de cua. */
+  decay: number;
+  /** 0..1, el nivell amb què torna al bus. */
+  wet: number;
+  muted: boolean;
+}
+
+/** El retorn B: un retard realimentat, sincronitzat al tempo. */
+export interface DelayReturn {
+  time: SyncRate;
+  /** 0..0,9. Per damunt, no s'apaga mai. */
+  feedback: number;
+  wet: number;
+  muted: boolean;
+}
+
+export interface Returns {
+  a: ReverbReturn;
+  b: DelayReturn;
+}
+
+export function defaultReturns(): Returns {
+  return {
+    a: { decay: 2.2, wet: 1, muted: false },
+    b: { time: "8n", feedback: 0.35, wet: 1, muted: false },
+  };
 }
 
 /**
@@ -144,6 +181,7 @@ export interface Pattern {
   swing: number;
   tracks: Track[];
   macros: Macro[];
+  returns: Returns;
 }
 
 export function emptyLane(): Cell[] {
@@ -151,7 +189,7 @@ export function emptyLane(): Cell[] {
 }
 
 export function defaultMix(): ChannelMix {
-  return { volume: 0, muted: false, solo: false };
+  return { volume: 0, muted: false, solo: false, pan: 0, sendA: 0, sendB: 0 };
 }
 
 /**
@@ -183,6 +221,7 @@ export function emptyPattern(name = "Sense títol"): Pattern {
     swing: 0,
     tracks: defaultTracks(),
     macros: defaultMacros(),
+    returns: defaultReturns(),
   };
 }
 
@@ -211,6 +250,7 @@ export function clonePattern(p: Pattern): Pattern {
       ...m,
       assignments: m.assignments.map((a) => ({ ...a })),
     })),
+    returns: { a: { ...p.returns.a }, b: { ...p.returns.b } },
   };
 }
 

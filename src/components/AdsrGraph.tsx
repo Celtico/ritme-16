@@ -32,11 +32,14 @@ export function AdsrGraph({ env, onChange }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [agafat, setAgafat] = useState<Handle | null>(null);
 
-  const xa = (env.attack / A_MAX) * A_PX;
-  const xd = xa + (env.decay / D_MAX) * D_PX;
-  const xs = xd + HOLD_PX;
-  const xr = xs + (env.release / R_MAX) * R_PX;
-  const ys = H - env.sustain * H;
+  // arrodonits per la mateixa raó que al knob: si no, el servidor i el
+  // navegador poden diferir en l'últim bit i React es queixa
+  const rd = (v: number) => Number(v.toFixed(3));
+  const xa = rd((env.attack / A_MAX) * A_PX);
+  const xd = rd(xa + (env.decay / D_MAX) * D_PX);
+  const xs = rd(xd + HOLD_PX);
+  const xr = rd(xs + (env.release / R_MAX) * R_PX);
+  const ys = rd(H - env.sustain * H);
 
   const moure = useCallback(
     (e: PointerEvent) => {

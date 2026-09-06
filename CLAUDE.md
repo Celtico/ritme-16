@@ -39,6 +39,10 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - Abans de tocar cap component, llegeix `.claude/skills/audio-ui/SKILL.md`: hi ha la
   disposició del panell de so i les regles de knobs, anells i macros.
 - Cap valor numèric fix sota els knobs: el número surt al globus mentre s'arrossega.
+- **Arrodoneix les coordenades que calculis en un SVG** (tres decimals ja basten). El
+  servidor i el navegador poden donar l'últim bit diferent a `Math.cos` o `Math.log`, i
+  llavors React avisa que l'HTML no coincideix. Ha passat, i el rètol d'error del mode
+  `dev` és fàcil de confondre amb un clic fet abans d'hidratar.
 - No tocar la paleta, les tipografies ni el layout de la consola si no ho demanen.
 
 ## On va cada cosa
@@ -51,8 +55,10 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   (espai, 1–8). Cap crida a Tone.
 - `src/components/Transport.tsx` — play/stop, tempo, swing, llums de compàs. Només
   presentació: rep valors i callbacks.
-- `src/components/TrackLane.tsx` — una fila: nom, M/S, volum i els passos. Rep un
-  `Track` sencer.
+- `src/components/TrackLane.tsx` — una fila: nom, M/S, volum, panoràmic, els dos
+  enviaments, els passos i el vúmetre. Rep un `Track` sencer.
+- `src/components/ReturnRows.tsx` — les dues files de retorn, al final de la llista.
+- `src/components/Meter.tsx` — la barra de 4 px. Rep el nivell ja llegit.
 - `src/components/StepButton.tsx` — una cel·la i el mapa `FACE` d'aparença per valor.
 - `src/components/SoundPanel.tsx` — el panell de so en tres bandes (cadena, fonts de
   modulació, editor de la família). Només presentació: rep un `Track` i retorna canvis.
@@ -62,6 +68,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - `src/components/PatternBank.tsx` — presets, sortejar, buidar i el desat al navegador.
 - `src/hooks/useSequencer.ts` — tot l'estat del patró i tot Tone: transport, seqüència,
   edicions. Cap component no ha de tocar Tone pel seu compte.
+- `src/hooks/useMeters.ts` — **un sol** bucle de dibuix per a tots els vúmetres. Ni se
+  n'obre un per fila, ni es llegeix cap meter des d'un component.
 - `src/lib/pattern.ts` — el model pur: `Track`, `Pattern`, `PRESETS`. Sense React ni Tone.
 - `src/lib/voices.ts` — una fàbrica per tipus de veu i la taula `KINDS` (nom, color,
   nivell, densitat). **Afegir una veu nova és afegir-hi una entrada i una fàbrica**: cap
@@ -86,31 +94,31 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 ## Sospitós / pendent
 
-- El panell de so està verificat al navegador de punta a punta: tancar el tall de 20 kHz a
-  20 Hz baixa el bombo 12,3 dB; `Velocitat → afinació` al 100 % li puja el fonamental de
-  35 a 64 Hz; arrossegar l'anell escriu la modulació sense moure el valor del knob; i el
+- Enviaments, retorns, panoràmic i vúmetres verificats al navegador: la cua del bombo
+  passa de 380 a 680 ms amb l'enviament A obert; el retard dona repics decreixents a
+  intervals regulars; el panoràmic separa els canals net (tot a la dreta dona L=0 i
+  R=0,37); i els vúmetres segueixen el patró i cauen entre cops.
+- El panell de so també està verificat: tancar el tall de 20 kHz a 20 Hz baixa el bombo
+  12,3 dB, `Velocitat → afinació` al 100 % li puja el fonamental de 35 a 64 Hz, i el
   gràfic ADSR mou l'atac, la caiguda i el sosteniment.
-- **Els anells només surten on la font arriba.** `MOD_ROUTES` a `voices.ts` mana: les
-  envolupants només al tall, la resta a qualsevol paràmetre. Comprovat a la interfície.
-- L'LFO es mostreja en disparar amb `lfoValueAt`, que és una funció pura i està provada
-  per separat; el camí que fa servir és el mateix que s'ha verificat amb la velocitat,
-  però **no s'ha mesurat una modulació d'LFO sonant**. Compte: està sincronitzat al
-  transport, o sigui que amb el transport aturat el seu valor no es mou.
-- **No s'han mesurat per separat**: `Env Amp → tall` (l'envolupant d'amplitud com a font
-  del filtre) ni la modulació de la saturació, que viu al kit i no a la cadena.
-- Les veus metàl·liques (aro, cencerro) no tenen node Filter: el tall hi escriu la
-  `resonance` del MetalSynth, o sigui que allà no hi ha ni envolupant de filtre ni LFO en
-  temps d'àudio, encara que sí que s'hi apliquen les modulacions per cop.
+- Canviar el `decay` del retorn A regenera la resposta impulsional del `Reverb`, i això
+  és **asíncron**: la reverberació calla un instant mentre es refà. És com funciona el
+  node, no un error.
+- **No s'ha provat** el camí de `prefers-reduced-motion` dels vúmetres (hauria de fer una
+  sola lectura i no animar), ni una modulació d'LFO sonant, ni `Env Amp → tall`, ni la
+  modulació de la saturació.
+- L'LFO està sincronitzat al transport: amb el transport aturat el seu valor no es mou.
 - Els presets sonen igual: bombo, aro, timbal i cencerro donen el mateix dBFS al decimal.
   Les veus de soroll varien molt entre dispars idèntics (la palmada, fins a 4,3 dB), o
   sigui que allà la mesura no distingeix.
 - Per mesurar el so: pengeu un `AnalyserNode` de la destinació sobreescrivint
-  `AudioNode.prototype.connect` abans del primer gest. Hi ha uns 125 ms de latència, i si
-  es simulen esdeveniments de punter cal deixar-hi una pausa entremig: els oients
-  s'enganxen en un efecte i el primer moviment es perd.
+  `AudioNode.prototype.connect` abans del primer gest (per als canals, un
+  `ChannelSplitter`). Hi ha uns 125 ms de latència, i si es simulen esdeveniments de
+  punter cal deixar-hi una pausa entremig: els oients s'enganxen en un efecte i el primer
+  moviment es perd.
 - El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
   `Tone.getDraw()` ja programades que arriben després de l'`stop()`. Ve d'abans.
 - Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
-  escenes, les pistes melòdiques (baix i acords) i la gestió de pistes (+ Pista, menú,
-  sends, retorns, pan i vúmetres).
+  escenes, les pistes melòdiques (baix i acords) i la gestió de pistes (+ Pista, menú per
+  pista, duplicar, moure, eliminar).
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

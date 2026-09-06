@@ -22,6 +22,11 @@ npm run dev
 | Obrir els comandaments de so | clic al nom de la veu |
 | Buidar una fila | doble clic al nom de la veu |
 
+Cada fila porta, a més del volum, un panoràmic i dos enviaments: A cap a una
+reverberació i B cap a un retard sincronitzat al tempo. Els dos retorns són les
+dues files del final, amb els seus controls i el seu silenci. A la dreta de cada
+fila hi ha un vúmetre, que només es mou mentre sona el transport.
+
 Els patrons desats van a `localStorage` d'aquest navegador. Els tres patrons
 d'exemple (`PRESETS`) estan definits al codi.
 

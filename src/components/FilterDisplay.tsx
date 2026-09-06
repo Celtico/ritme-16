@@ -9,10 +9,16 @@ const MAX_HZ = 20000;
 const MAX_DB = 20;
 const MIN_DB = -40;
 
+// arrodonit perquè el servidor i el navegador donin exactament el mateix
 const x = (hz: number) =>
-  (Math.log(hz / MIN_HZ) / Math.log(MAX_HZ / MIN_HZ)) * W;
+  Number(((Math.log(hz / MIN_HZ) / Math.log(MAX_HZ / MIN_HZ)) * W).toFixed(3));
 const y = (db: number) =>
-  H - ((Math.max(MIN_DB, Math.min(MAX_DB, db)) - MIN_DB) / (MAX_DB - MIN_DB)) * H;
+  Number(
+    (
+      H -
+      ((Math.max(MIN_DB, Math.min(MAX_DB, db)) - MIN_DB) / (MAX_DB - MIN_DB)) * H
+    ).toFixed(3),
+  );
 
 /** La resposta real del filtre, calculada, no una corba decorativa. */
 export function FilterDisplay({

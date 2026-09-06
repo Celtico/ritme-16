@@ -18,15 +18,26 @@ interface Props {
   ring?: number;
   ringColor?: string;
   onRing?: (amount: number) => void;
+  /** A les files no hi cap l'etiqueta: queda al títol i a l'aria-label. */
+  hideLabel?: boolean;
 }
 
 const INICI = -135;
 const ESCOMBRAT = 270;
 
-/** Punt del cercle a l'angle demanat, en graus, amb 0 a dalt. */
+/**
+ * Punt del cercle a l'angle demanat, en graus, amb 0 a dalt.
+ *
+ * Els valors s'arrodoneixen a tres decimals a posta: el servidor i el
+ * navegador poden donar l'últim bit diferent a Math.cos i Math.sin, i llavors
+ * React es queixa que l'HTML renderitzat no coincideix.
+ */
 function punt(cx: number, cy: number, r: number, graus: number) {
   const rad = ((graus - 90) * Math.PI) / 180;
-  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  return [
+    Number((cx + r * Math.cos(rad)).toFixed(3)),
+    Number((cy + r * Math.sin(rad)).toFixed(3)),
+  ];
 }
 
 function arc(cx: number, cy: number, r: number, de: number, a: number) {
@@ -51,6 +62,7 @@ export function Knob({
   ring,
   ringColor = "var(--color-oxblood)",
   onRing,
+  hideLabel = false,
 }: Props) {
   const [arrossegant, setArrossegant] = useState(false);
   const inici = useRef({ y: 0, valor: 0, anell: false });
@@ -209,7 +221,11 @@ export function Knob({
         ) : null}
       </svg>
 
-      <span className="mt-1 text-[12px] leading-none text-ink-soft">{label}</span>
+      {hideLabel ? null : (
+        <span className="mt-1 text-[12px] leading-none text-ink-soft">
+          {label}
+        </span>
+      )}
     </div>
   );
 }
