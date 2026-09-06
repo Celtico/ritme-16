@@ -81,6 +81,8 @@ export function Workspace() {
   // només un menú de pista obert alhora
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [listWidth, setListWidth] = useState(LIST_WIDTH);
+  /** L'usuari ha arrossegat el divisor? Llavors no se li toca l'amplada. */
+  const amplsdaManual = useRef(false);
   const [panelHeight, setPanelHeight] = useState(PANEL_HEIGHT);
   const [snap, setSnap] = useState(true);
 
@@ -110,6 +112,29 @@ export function Workspace() {
   useEffect(() => {
     tracksRef.current = tracks;
   }, [tracks]);
+
+  /**
+   * La columna de pistes ha de ser tan ampla com el que hi ha a dins. Amb un
+   * número fix, afegir-hi un control la deixa curta en silenci: aquí en
+   * queien fora el panoràmic, els dos enviaments i el vúmetre de cada pista,
+   * 108 px de contingut que no hi cabien.
+   */
+  useEffect(() => {
+    if (amplsdaManual.current) return;
+    const el = list.current;
+    if (!el) return;
+    const mesura = () => {
+      if (amplsdaManual.current) return;
+      const cal = el.scrollWidth;
+      if (cal > el.clientWidth) {
+        setListWidth((w) => Math.min(LIST_MAX, Math.max(w, cal)));
+      }
+    };
+    mesura();
+    const ro = new ResizeObserver(mesura);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [tracks.length]);
 
   // --- desplaçament vertical sincronitzat entre els dos panells ----------
   const grid = useRef<HTMLDivElement | null>(null);
@@ -244,11 +269,10 @@ export function Workspace() {
         <Divider
           axis="x"
           label="Amplada de la llista de pistes"
-          onDrag={(d) =>
-            setListWidth((w) =>
-              Math.max(LIST_MIN, Math.min(LIST_MAX, w - d)),
-            )
-          }
+          onDrag={(d) => {
+            amplsdaManual.current = true;
+            setListWidth((w) => Math.max(LIST_MIN, Math.min(LIST_MAX, w - d)));
+          }}
         />
 
         <div

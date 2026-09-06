@@ -11,7 +11,7 @@ export const RULER_HEIGHT = 18;
 /** Amplada per defecte i mínima de la llista de pistes, en píxels. */
 export const LIST_WIDTH = 280;
 export const LIST_MIN = 200;
-export const LIST_MAX = 420;
+export const LIST_MAX = 520;
 
 /** Alçada per defecte i mínima del panell inferior. */
 export const PANEL_HEIGHT = 320;
