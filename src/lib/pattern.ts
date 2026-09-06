@@ -13,6 +13,7 @@ import {
 export const STEPS = 16;
 
 export {
+  canRoute,
   DECAY_MAX,
   DECAY_MIN,
   defaultFilter,
@@ -22,6 +23,8 @@ export {
   LFO_SHAPES,
   MAX_LFO,
   MAX_MACROS,
+  lfoValueAt,
+  MOD_ROUTES,
   MOD_SOURCES,
   MOD_TARGETS,
   SOURCE_FAMILY,

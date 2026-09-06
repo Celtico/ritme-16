@@ -58,6 +58,20 @@ function toneFals(reg: Registre) {
         });
       }
     },
+    Envelope: class {
+      constructor() {
+        return node({
+          attack: 0,
+          decay: 0,
+          sustain: 0,
+          release: 0,
+          triggerAttackRelease: () => {},
+        });
+      }
+    },
+    Scale: class { constructor() { return node({ min: 0, max: 0 }); } },
+    Time: (v: unknown) => ({ toSeconds: () => 0.5, valueOf: () => v }),
+    getTransport: () => ({ seconds: 0 }),
     LFO: class {
       constructor() {
         const n = node({

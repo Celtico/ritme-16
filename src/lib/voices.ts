@@ -106,6 +106,53 @@ export const MOD_SOURCES: ModSource[] = [
 ];
 export const MOD_TARGETS: ModTarget[] = ["cutoff", "pitch", "decay", "drive"];
 
+/**
+ * On pot arribar cada font. Les envolupants només saben moure el filtre: són
+ * senyals que varien amb el temps, i mostrejar-les en el moment del cop
+ * donaria sempre zero. La resta de fonts es mostregen en disparar, així que
+ * poden anar a qualsevol paràmetre.
+ *
+ * La interfície només dibuixa l'anell on aquesta taula ho permet: val més no
+ * poder encaminar una cosa que deixar-la encaminar i que no soni.
+ */
+export const MOD_ROUTES: Record<ModSource, ModTarget[]> = {
+  envAmp: ["cutoff"],
+  envFilter: ["cutoff"],
+  lfo1: ["cutoff", "pitch", "decay", "drive"],
+  lfo2: ["cutoff", "pitch", "decay", "drive"],
+  velocity: ["cutoff", "pitch", "decay", "drive"],
+  random: ["cutoff", "pitch", "decay", "drive"],
+};
+
+export function canRoute(source: ModSource, target: ModTarget): boolean {
+  return MOD_ROUTES[source].includes(target);
+}
+
+/**
+ * El valor d'un LFO, de -1 a 1, en un instant concret. És una funció pura
+ * perquè les veus el mostregen en disparar: així una modulació d'LFO cap a
+ * l'afinació o la caiguda es pot calcular sense llegir cap node d'àudio.
+ */
+export function lfoValueAt(
+  shape: LfoShape,
+  periodSeconds: number,
+  seconds: number,
+): number {
+  if (periodSeconds <= 0) return 0;
+  const t = ((seconds % periodSeconds) + periodSeconds) % periodSeconds;
+  const phase = t / periodSeconds;
+  switch (shape) {
+    case "sine":
+      return Math.sin(phase * 2 * Math.PI);
+    case "triangle":
+      return 1 - 4 * Math.abs(phase - 0.5);
+    case "square":
+      return phase < 0.5 ? 1 : -1;
+    case "sawtooth":
+      return 2 * phase - 1;
+  }
+}
+
 /** Noms en català de les fonts i les destinacions, per a la interfície. */
 export const SOURCE_NAMES: Record<ModSource, string> = {
   envAmp: "Env Amp",
@@ -258,12 +305,30 @@ function filterRig(Tone: ToneModule, node: Filter) {
     l.sync().start(0);
   }
 
+  // L'envolupant d'amplitud com a font del filtre. Va per un Envelope pelat i
+  // una escala, i no per un segon FrequencyEnvelope, perquè un Envelope
+  // reposa exactament a zero i per tant no desplaça el tall quan no s'usa.
+  const ampEnv = new Tone.Envelope({
+    attack: 0.001,
+    decay: 0.2,
+    sustain: 0,
+    release: 0.1,
+  });
+  const ampScale = new Tone.Scale(0, 0);
+  ampEnv.connect(ampScale);
+  ampScale.connect(node.frequency);
+
+  let actuals: VoiceParams | null = null;
+
   return {
     apply(p: VoiceParams) {
+      actuals = p;
       node.type = p.filter.type;
       node.Q.value = p.filter.q;
       env.baseFrequency = p.filter.cutoff;
       env.octaves = p.envFilter.amount * 4;
+      ampEnv.decay = p.decay;
+      ampScale.max = modAmount(p, "envAmp", "cutoff") * p.filter.cutoff * 3;
       env.attack = p.envFilter.attack;
       env.decay = p.envFilter.decay;
       env.sustain = p.envFilter.sustain;
@@ -284,42 +349,97 @@ function filterRig(Tone: ToneModule, node: Filter) {
         l.max = abast;
       });
     },
-    trigger(time: number, velocity: number) {
+    /** `mod` és la desviació del tall per aquest cop, de -1 a 1. */
+    trigger(time: number, velocity: number, mod = 0) {
+      if (actuals) {
+        env.baseFrequency = Math.max(
+          20,
+          Math.min(20000, actuals.filter.cutoff * Math.pow(4, mod)),
+        );
+      }
       env.triggerAttackRelease(0.05, time, velocity);
+      ampEnv.triggerAttackRelease(0.05, time, velocity);
     },
     dispose() {
       env.dispose();
+      ampEnv.dispose();
+      ampScale.dispose();
       for (const l of lfos) l.dispose();
     },
   };
 }
 
-/**
- * Les modulacions que s'apliquen en disparar, no en temps d'àudio. Accepta un
- * paràmetre nul perquè una cadena es pot disparar abans que li arribin els
- * seus valors, i llavors no ha de modular res, no ha de petar.
- */
-function perTrigger(
+export type ModSampler = (
   p: VoiceParams | null,
   target: ModTarget,
   velocity: number,
-) {
-  if (!p) return 0;
-  let total = 0;
-  for (const m of p.mods) {
-    if (m.target !== target) continue;
-    if (m.source === "velocity") total += m.amount * velocity;
-    else if (m.source === "random") total += m.amount * (Math.random() * 2 - 1);
-  }
-  return total;
+) => number;
+
+/**
+ * Mostreja totes les fonts que apunten a un paràmetre i en suma les
+ * quantitats, de -1 a 1. Es crida en disparar, no en temps d'àudio: en una
+ * caixa de ritmes les veus són d'un sol cop, i el valor de la font en el
+ * moment del cop és justament el que es vol.
+ *
+ * Accepta un paràmetre nul perquè una cadena es pot disparar abans que li
+ * arribin els seus valors, i llavors no ha de modular res, no ha de petar.
+ */
+export function makeModSampler(Tone: ToneModule): ModSampler {
+  return (p, target, velocity) => {
+    if (!p) return 0;
+    let total = 0;
+    for (const m of p.mods) {
+      if (m.target !== target || !canRoute(m.source, target)) continue;
+      if (m.source === "velocity") {
+        total += m.amount * velocity;
+      } else if (m.source === "random") {
+        total += m.amount * (Math.random() * 2 - 1);
+      } else if (m.source === "lfo1" || m.source === "lfo2") {
+        const cfg = p.lfo[m.source === "lfo1" ? 0 : 1];
+        if (!cfg || cfg.depth === 0) continue;
+        total +=
+          m.amount *
+          cfg.depth *
+          lfoValueAt(
+            cfg.shape,
+            Tone.Time(cfg.rate).toSeconds(),
+            Tone.getTransport().seconds,
+          );
+      }
+    }
+    return Math.max(-1, Math.min(1, total));
+  };
 }
 
-type Factory = (Tone: ToneModule, out: Destination) => VoiceChain;
+/** Quantitat d'una modulació concreta, per als encaminaments d'àudio. */
+export function modAmount(
+  p: VoiceParams,
+  source: ModSource,
+  target: ModTarget,
+): number {
+  return p.mods.find((m) => m.source === source && m.target === target)?.amount ?? 0;
+}
+
+type Factory = (
+  Tone: ToneModule,
+  out: Destination,
+  mod: ModSampler,
+) => VoiceChain;
+
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, v));
+
+/** La caiguda d'aquest cop, amb la modulació aplicada. */
+function decayAmb(p: VoiceParams | null, m: number) {
+  if (!p) return 0.2;
+  return clamp(p.decay * Math.pow(4, m), DECAY_MIN, DECAY_MAX);
+}
 
 /** Les membranes (bombo i timbal) només es diferencien pels seus valors. */
 function membraneChain(
   Tone: ToneModule,
   out: Destination,
+  mod: ModSampler,
   o: {
     nota: string;
     pitchDecay: number;
@@ -338,8 +458,13 @@ function membraneChain(
   let params: VoiceParams | null = null;
   return {
     trigger: (t, v) => {
-      const pitch = (params?.pitch ?? 0) + perTrigger(params, "pitch", v) * 12;
-      rig.trigger(t, v);
+      const pitch = clamp(
+        (params?.pitch ?? 0) + mod(params, "pitch", v) * 12,
+        -24,
+        24,
+      );
+      synth.envelope.decay = decayAmb(params, mod(params, "decay", v));
+      rig.trigger(t, v, mod(params, "cutoff", v));
       synth.triggerAttackRelease(
         Tone.Frequency(o.nota).transpose(pitch).toFrequency(),
         "8n",
@@ -365,6 +490,7 @@ function membraneChain(
 function hatChain(
   Tone: ToneModule,
   out: Destination,
+  mod: ModSampler,
   decay: number,
   durada: string,
   extra: { sustain?: number; release?: number } = {},
@@ -375,13 +501,16 @@ function hatChain(
     noise: { type: "white" },
     envelope: { attack: 0.001, decay, sustain: 0, ...extra },
   }).connect(node);
+  let params: VoiceParams | null = null;
   return {
     trigger: (t, v) => {
-      rig.trigger(t, v);
+      synth.envelope.decay = decayAmb(params, mod(params, "decay", v));
+      rig.trigger(t, v, mod(params, "cutoff", v));
       synth.triggerAttackRelease(durada, t, v);
     },
     release: (t) => synth.triggerRelease(t),
     setParams: (p) => {
+      params = p;
       synth.envelope.decay = p.decay;
       rig.apply(p);
     },
@@ -401,6 +530,7 @@ function hatChain(
 function metalChain(
   Tone: ToneModule,
   out: Destination,
+  mod: ModSampler,
   o: {
     envelope: { attack: number; decay: number; release: number };
     harmonicity: number;
@@ -421,7 +551,20 @@ function metalChain(
   let params: VoiceParams | null = null;
   return {
     trigger: (t, v) => {
-      const pitch = (params?.pitch ?? 0) + perTrigger(params, "pitch", v) * 12;
+      const pitch = clamp(
+        (params?.pitch ?? 0) + mod(params, "pitch", v) * 12,
+        -24,
+        24,
+      );
+      synth.envelope.decay = decayAmb(params, mod(params, "decay", v));
+      if (params) {
+        // sense node Filter, el tall és la ressonància, que és una propietat
+        synth.resonance = clamp(
+          params.filter.cutoff * Math.pow(4, mod(params, "cutoff", v)),
+          0,
+          7000,
+        );
+      }
       synth.triggerAttackRelease(o.freq * semitons(pitch), o.durada, t, v);
     },
     release: () => {},
@@ -436,16 +579,16 @@ function metalChain(
 }
 
 const FACTORIES: Record<VoiceKind, Factory> = {
-  bombo: (Tone, out) =>
-    membraneChain(Tone, out, {
+  bombo: (Tone, out, mod) =>
+    membraneChain(Tone, out, mod, {
       nota: "C1",
       pitchDecay: 0.045,
       octaves: 6,
       envelope: { attack: 0.001, decay: 0.42, sustain: 0.008, release: 1.2 },
     }),
 
-  timbal: (Tone, out) =>
-    membraneChain(Tone, out, {
+  timbal: (Tone, out, mod) =>
+    membraneChain(Tone, out, mod, {
       nota: "A1",
       pitchDecay: 0.1,
       octaves: 3,
@@ -453,7 +596,7 @@ const FACTORIES: Record<VoiceKind, Factory> = {
     }),
 
   // --- Caixa: cos tonal + soroll filtrat --------------------------------
-  caixa: (Tone, out) => {
+  caixa: (Tone, out, mod) => {
     const node = new Tone.Filter(1500, "highpass").connect(out);
     const rig = filterRig(Tone, node);
     const soroll = new Tone.NoiseSynth({
@@ -469,9 +612,13 @@ const FACTORIES: Record<VoiceKind, Factory> = {
     let params: VoiceParams | null = null;
     return {
       trigger: (t, v) => {
-        const pitch =
-          (params?.pitch ?? 0) + perTrigger(params, "pitch", v) * 12;
-        rig.trigger(t, v);
+        const pitch = clamp(
+          (params?.pitch ?? 0) + mod(params, "pitch", v) * 12,
+          -24,
+          24,
+        );
+        soroll.envelope.decay = decayAmb(params, mod(params, "decay", v));
+        rig.trigger(t, v, mod(params, "cutoff", v));
         cos.triggerAttackRelease(
           Tone.Frequency("G2").transpose(pitch).toFrequency(),
           "32n",
@@ -499,7 +646,7 @@ const FACTORIES: Record<VoiceKind, Factory> = {
   },
 
   // --- Palmada: tres ràfegues curtes + cua ------------------------------
-  palmada: (Tone, out) => {
+  palmada: (Tone, out, mod) => {
     const node = new Tone.Filter({
       frequency: 1100,
       type: "bandpass",
@@ -510,15 +657,18 @@ const FACTORIES: Record<VoiceKind, Factory> = {
       noise: { type: "white" },
       envelope: { attack: 0.001, decay: 0.11, sustain: 0 },
     }).connect(node);
+    let params: VoiceParams | null = null;
     return {
       trigger: (t, v) => {
-        rig.trigger(t, v);
+        synth.envelope.decay = decayAmb(params, mod(params, "decay", v));
+        rig.trigger(t, v, mod(params, "cutoff", v));
         synth.triggerAttackRelease("32n", t, v * 0.7);
         synth.triggerAttackRelease("32n", t + 0.011, v * 0.85);
         synth.triggerAttackRelease("16n", t + 0.023, v);
       },
       release: () => {},
       setParams: (p) => {
+        params = p;
         synth.envelope.decay = p.decay;
         rig.apply(p);
       },
@@ -530,12 +680,12 @@ const FACTORIES: Record<VoiceKind, Factory> = {
     };
   },
 
-  charles: (Tone, out) => hatChain(Tone, out, 0.045, "32n"),
-  charlesObert: (Tone, out) =>
-    hatChain(Tone, out, 0.38, "8n", { sustain: 0.02, release: 0.12 }),
+  charles: (Tone, out, mod) => hatChain(Tone, out, mod, 0.045, "32n"),
+  charlesObert: (Tone, out, mod) =>
+    hatChain(Tone, out, mod, 0.38, "8n", { sustain: 0.02, release: 0.12 }),
 
-  aro: (Tone, out) =>
-    metalChain(Tone, out, {
+  aro: (Tone, out, mod) =>
+    metalChain(Tone, out, mod, {
       envelope: { attack: 0.001, decay: 0.035, release: 0.01 },
       harmonicity: 5.1,
       modulationIndex: 32,
@@ -544,8 +694,8 @@ const FACTORIES: Record<VoiceKind, Factory> = {
       freq: 420,
       durada: "64n",
     }),
-  cencerro: (Tone, out) =>
-    metalChain(Tone, out, {
+  cencerro: (Tone, out, mod) =>
+    metalChain(Tone, out, mod, {
       envelope: { attack: 0.001, decay: 0.3, release: 0.08 },
       harmonicity: 12,
       modulationIndex: 16,
@@ -560,6 +710,7 @@ export function createVoice(
   Tone: ToneModule,
   kind: VoiceKind,
   out: Destination,
+  mod: ModSampler,
 ): VoiceChain {
-  return FACTORIES[kind](Tone, out);
+  return FACTORIES[kind](Tone, out, mod);
 }

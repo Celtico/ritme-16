@@ -135,6 +135,13 @@ Clicar una targeta la **selecciona**. Amb una font seleccionada:
 **Sense cap font seleccionada, els anells no es dibuixen.** El panell en repòs
 ha de ser llegible; els anells són un mode, no decoració permanent.
 
+**L'anell només surt on la font arriba de debò.** Hi ha una taula
+d'encaminaments possibles (`MOD_ROUTES` a `lib/voices.ts`): les envolupants
+només saben moure el filtre, perquè són senyals que varien amb el temps i
+mostrejar-les en el moment del cop donaria sempre zero; les altres fonts es
+mostregen en disparar i poden anar a qualsevol paràmetre. Val més no poder
+encaminar una cosa que deixar-la encaminar i que després no soni.
+
 ### El display del filtre
 
 Un SVG de **200×60 px** dins el bloc del filtre amb la **resposta en
@@ -157,7 +164,8 @@ freqüència de tall cau ~3 dB amb Q=0,707, i la caiguda és de 12 dB per octava
 | Aleatori | `teal` |
 
 L'editor d'envolupant és un **gràfic ADSR amb els punts arrossegables**, i
-**a més** els quatre knobs. Les dues maneres editen el mateix valor: el gràfic
+**a més** els quatre knobs. Tres punts: l'atac, el vèrtex de caiguda i
+sosteniment (que es mou en totes dues direccions) i la relaxació. Les dues maneres editen el mateix valor: el gràfic
 va bé per trobar la forma, els knobs per afinar-la. Qui no pugui arrossegar ha
 de poder fer servir els knobs amb el teclat.
 

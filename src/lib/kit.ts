@@ -1,6 +1,7 @@
 import {
   createVoice,
   KINDS,
+  makeModSampler,
   type VoiceChain,
   type VoiceKind,
   type VoiceParams,
@@ -28,6 +29,8 @@ interface Entry {
   volume: InstanceType<ToneModule["Volume"]>;
   drive: InstanceType<ToneModule["Distortion"]>;
   trim: number;
+  /** El kit en guarda una còpia per poder modular la saturació a cada cop. */
+  params: VoiceParams | null;
 }
 
 /**
@@ -44,6 +47,7 @@ export function createKit(Tone: ToneModule): DrumKit {
   }).toDestination();
 
   const entries = new Map<string, Entry>();
+  const mod = makeModSampler(Tone);
 
   const destroy = (e: Entry) => {
     e.chain.dispose();
@@ -65,10 +69,11 @@ export function createKit(Tone: ToneModule): DrumKit {
       );
       entries.set(id, {
         kind,
-        chain: createVoice(Tone, kind, drive),
+        chain: createVoice(Tone, kind, drive, mod),
         volume,
         drive,
         trim: 0,
+        params: null,
       });
     },
 
@@ -89,6 +94,15 @@ export function createKit(Tone: ToneModule): DrumKit {
           if (chokes.includes(altre.kind)) altre.chain.release(time);
         }
       }
+      // la saturació viu al kit, no a la cadena, així que es modula aquí
+      if (e.params) {
+        const d = Math.max(
+          0,
+          Math.min(1, e.params.drive + mod(e.params, "drive", velocity)),
+        );
+        e.drive.distortion = d;
+        e.drive.wet.value = d;
+      }
       e.chain.trigger(time, velocity);
     },
 
@@ -102,6 +116,7 @@ export function createKit(Tone: ToneModule): DrumKit {
     setParams(id, params) {
       const e = entries.get(id);
       if (!e) return;
+      e.params = params;
       e.drive.distortion = params.drive;
       e.drive.wet.value = params.drive;
       e.chain.setParams(params);

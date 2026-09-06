@@ -65,10 +65,13 @@ resposta dibuixada de debò), Drive (saturació) i Amp (caiguda). Cada veu nomé
 mostra els blocs que té: les de soroll pur no tenen res que afinar.
 
 **Les fonts de modulació.** Env Amp, Env Filtre, LFO 1, LFO 2, Velocitat i
-Atzar. Triant-ne una, cada comandament mostra un anell exterior; arrossegant-lo
-s'hi encamina la font, de −100 a +100 %.
+Atzar. Triant-ne una, els comandaments on aquella font pot arribar mostren un
+anell exterior; arrossegant-lo s'hi encamina, de −100 a +100 %. Les envolupants
+només arriben al filtre; les altres fonts es mostregen en el moment del cop i
+van a qualsevol paràmetre.
 
-**L'editor.** Pestanyes per família: envolupants, LFO i atzar.
+**L'editor.** Pestanyes per família: envolupants, amb el gràfic ADSR de punts
+arrossegables; LFO, sincronitzats al tempo; i atzar.
 
 A la dreta hi ha quatre macros, que són del patró i no de la pista: un de sol
 pot moure paràmetres de pistes diferents alhora.

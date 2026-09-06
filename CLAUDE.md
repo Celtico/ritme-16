@@ -87,26 +87,29 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 ## Sospitós / pendent
 
 - El panell de so està verificat al navegador de punta a punta: tancar el tall de 20 kHz a
-  20 Hz baixa el bombo 12,3 dB, i arrossegar l'anell amb una font triada escriu la
-  modulació sense moure el valor del knob.
-- **Modulacions que es desen però encara no sonen.** Només s'apliquen `velocitat` i
-  `atzar` cap a qualsevol destinació (en disparar), i `LFO 1`/`LFO 2` cap al tall (en
-  temps d'àudio). Assignar `Env Amp` o `Env Filtre` des de la tira, o un LFO cap a
-  afinació, caiguda o saturació, queda guardat al patró i no fa res. L'envolupant de
-  filtre sí que funciona pel seu knob de "quantitat".
-- **L'editor ADSR no té gràfic**: el skill demana punts arrossegables *i* knobs, i de
-  moment només hi ha els knobs.
+  20 Hz baixa el bombo 12,3 dB; `Velocitat → afinació` al 100 % li puja el fonamental de
+  35 a 64 Hz; arrossegar l'anell escriu la modulació sense moure el valor del knob; i el
+  gràfic ADSR mou l'atac, la caiguda i el sosteniment.
+- **Els anells només surten on la font arriba.** `MOD_ROUTES` a `voices.ts` mana: les
+  envolupants només al tall, la resta a qualsevol paràmetre. Comprovat a la interfície.
+- L'LFO es mostreja en disparar amb `lfoValueAt`, que és una funció pura i està provada
+  per separat; el camí que fa servir és el mateix que s'ha verificat amb la velocitat,
+  però **no s'ha mesurat una modulació d'LFO sonant**. Compte: està sincronitzat al
+  transport, o sigui que amb el transport aturat el seu valor no es mou.
+- **No s'han mesurat per separat**: `Env Amp → tall` (l'envolupant d'amplitud com a font
+  del filtre) ni la modulació de la saturació, que viu al kit i no a la cadena.
 - Les veus metàl·liques (aro, cencerro) no tenen node Filter: el tall hi escriu la
-  `resonance` del MetalSynth, que és una propietat i no un senyal, o sigui que allà no hi
-  ha ni envolupant de filtre ni LFO.
-- Els presets sonen igual: bombo, aro, timbal i cencerro donen el mateix dBFS al decimal
-  abans i després. Les veus de soroll varien fins a 2,8 dB entre dispars idèntics, o sigui
-  que allà la mesura no distingeix.
+  `resonance` del MetalSynth, o sigui que allà no hi ha ni envolupant de filtre ni LFO en
+  temps d'àudio, encara que sí que s'hi apliquen les modulacions per cop.
+- Els presets sonen igual: bombo, aro, timbal i cencerro donen el mateix dBFS al decimal.
+  Les veus de soroll varien molt entre dispars idèntics (la palmada, fins a 4,3 dB), o
+  sigui que allà la mesura no distingeix.
 - Per mesurar el so: pengeu un `AnalyserNode` de la destinació sobreescrivint
-  `AudioNode.prototype.connect` abans del primer gest. Hi ha uns 125 ms de latència.
+  `AudioNode.prototype.connect` abans del primer gest. Hi ha uns 125 ms de latència, i si
+  es simulen esdeveniments de punter cal deixar-hi una pausa entremig: els oients
+  s'enganxen en un efecte i el primer moviment es perd.
 - El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
-  `Tone.getDraw()` ja programades que arriben després de l'`stop()`. Ve d'abans d'aquests
-  canvis.
+  `Tone.getDraw()` ja programades que arriben després de l'`stop()`. Ve d'abans.
 - Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
   escenes, les pistes melòdiques (baix i acords) i la gestió de pistes (+ Pista, menú,
   sends, retorns, pan i vúmetres).

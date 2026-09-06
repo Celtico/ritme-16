@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { AdsrGraph } from "./AdsrGraph";
 import { FilterDisplay } from "./FilterDisplay";
 import { Knob } from "./Knob";
 import { Macros } from "./Macros";
 import { ModStrip } from "./ModStrip";
 import {
+  canRoute,
   DECAY_MAX,
   DECAY_MIN,
   defaultParams,
   FAMILY_COLOR,
   KINDS,
   LFO_SHAPES,
+  MOD_ROUTES,
   MOD_SOURCES,
   SOURCE_FAMILY,
   SOURCE_NAMES,
@@ -71,11 +74,20 @@ export function SoundPanel({ track, tracks, macros, onChange, onMacro }: Props) 
   const factory = defaultParams(track.kind);
   const blocks = KINDS[track.kind].blocks;
 
-  const quantitat = (target: ModTarget) =>
-    font ? (p.mods.find((m) => m.source === font && m.target === target)?.amount ?? 0) : undefined;
+  // L'anell només surt on la font pot arribar de debò; i l'envolupant de
+  // filtre cap al tall ja té el seu propi camp, així que l'anell l'escriu.
+  const quantitat = (target: ModTarget) => {
+    if (!font || !canRoute(font, target)) return undefined;
+    if (font === "envFilter" && target === "cutoff") return p.envFilter.amount;
+    return p.mods.find((m) => m.source === font && m.target === target)?.amount ?? 0;
+  };
 
   const posaMod = (target: ModTarget, amount: number) => {
-    if (!font) return;
+    if (!font || !canRoute(font, target)) return;
+    if (font === "envFilter" && target === "cutoff") {
+      onChange({ envFilter: { ...p.envFilter, amount: Math.max(0, amount) } });
+      return;
+    }
     const resta = p.mods.filter(
       (m) => !(m.source === font && m.target === target),
     );
@@ -237,7 +249,7 @@ export function SoundPanel({ track, tracks, macros, onChange, onMacro }: Props) 
         />
         <p className="mt-2 text-[12px] text-ink-soft">
           {font
-            ? `Arrossega l'anell de qualsevol comandament per encaminar-hi ${SOURCE_NAMES[font]}.`
+            ? `Arrossega l'anell per encaminar-hi ${SOURCE_NAMES[font]}. Aquesta font pot anar a: ${MOD_ROUTES[font].map((t) => TARGET_NAMES[t]).join(", ")}.`
             : "Tria una font per encaminar-la als comandaments."}
         </p>
       </div>
@@ -269,7 +281,13 @@ export function SoundPanel({ track, tracks, macros, onChange, onMacro }: Props) 
         </div>
 
         {familia === "env" ? (
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <AdsrGraph
+              env={p.envFilter}
+              onChange={(canvis) =>
+                onChange({ envFilter: { ...p.envFilter, ...canvis } })
+              }
+            />
             <Knob label="atac" value={p.envFilter.attack} min={0.001} max={1} step={0.001} format={ms} onChange={(attack) => onChange({ envFilter: { ...p.envFilter, attack } })} />
             <Knob label="caiguda" value={p.envFilter.decay} min={0.01} max={2} step={0.01} format={ms} onChange={(decay) => onChange({ envFilter: { ...p.envFilter, decay } })} />
             <Knob label="sosteniment" value={p.envFilter.sustain} min={0} max={1} step={0.01} format={pct} onChange={(sustain) => onChange({ envFilter: { ...p.envFilter, sustain } })} />
