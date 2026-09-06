@@ -152,6 +152,41 @@ describe("les regles de gènere se senten al resultat", () => {
     }
   });
 
+  it("house: la palmada i el charles obert no coincideixen mai", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const p = generate(styleById("house")!, seed).song.slots[0].pattern;
+      const palmada = p.tracks.find((t) => t.kind === "palmada")!;
+      const obert = p.tracks.find((t) => t.kind === "charlesObert")!;
+      for (let i = 0; i < p.length; i++) {
+        expect(
+          palmada.steps[i] && obert.steps[i],
+          `llavor ${seed}, pas ${i}`,
+        ).toBeFalsy();
+      }
+    }
+  });
+
+  it("breakbeat: cada caixa fantasma va enganxada a una de forta", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const p = generate(styleById("breakbeat")!, seed).song.slots[0].pattern;
+      const c = p.tracks.find((t) => t.kind === "caixa")!;
+      const forts = new Set<number>();
+      for (let b = 0; b * 16 < p.length; b++) forts.add(b * 16 + 4).add(b * 16 + 12);
+      // cap cop de caixa fora d'un de fort o del seu fantasma
+      const permesos = new Set<number>();
+      for (const i of forts) permesos.add(i).add(i + 1).add(i + 2);
+      for (let i = 0; i < p.length; i++) {
+        if (c.steps[i]) {
+          expect(permesos.has(i), `llavor ${seed}, pas ${i} escampat`).toBe(true);
+        }
+      }
+      // i almenys un fantasma
+      let fantasmes = 0;
+      for (const i of forts) if (c.steps[i + 1] || c.steps[i + 2]) fantasmes++;
+      expect(fantasmes, `llavor ${seed}`).toBeGreaterThan(0);
+    }
+  });
+
   it("techno: decay curt i saturació alta al bombo", () => {
     for (let seed = 1; seed <= 20; seed++) {
       const p = generate(styleById("techno")!, seed).song.slots[0].pattern;

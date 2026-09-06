@@ -57,6 +57,17 @@ export const STYLES: StyleSpec[] = [
       (p) => nomesA(p, "bombo", temps(p)),
       // i la palmada al 2 i al 4
       (p) => afegeixA(p, "palmada", dosIQuatre(p)),
+      // La palmada i el charles obert ocupen el mateix lloc de l'espectre i
+      // tots dos van al contratemps: si coincideixen, es tapen i se sent un
+      // sol cop més fort. Guanya la palmada, que és la que marca el temps.
+      (p) => {
+        const palmada = veu(p, "palmada");
+        const obert = veu(p, "charlesObert");
+        if (!palmada || !obert) return;
+        for (let i = 0; i < p.length; i++) {
+          if (palmada.steps[i] && obert.steps[i]) obert.steps[i] = 0;
+        }
+      },
     ],
     sound: {
       bombo: (r) => ({ decay: 0.3 + r() * 0.15, drive: r() * 0.2 }),
@@ -94,6 +105,29 @@ export const STYLES: StyleSpec[] = [
         for (let c = 0; c * 16 < p.length; c++) b.steps[c * 16 + 8] = 0;
       },
       (p) => afegeixA(p, "bombo", [0], 2),
+      // Els cops fantasma van enganxats darrere d'una caixa forta, a un o
+      // dos passos. Els que el sorteig deixa escampats no són fantasmes:
+      // són brossa, i s'esborren. Sempre n'hi ha d'haver almenys un.
+      (p, rng: Rng) => {
+        const c = veu(p, "caixa");
+        if (!c) return;
+        const forts = dosIQuatre(p).filter((i) => i < p.length);
+        const permesos = new Set<number>(forts);
+        for (const i of forts) permesos.add(i + 1).add(i + 2);
+        for (let i = 0; i < p.length; i++) {
+          if (c.steps[i] && !permesos.has(i)) c.steps[i] = 0;
+        }
+        let posats = 0;
+        for (const i of forts) {
+          if (!chance(rng, 0.7)) continue;
+          const j = i + (chance(rng, 0.5) ? 1 : 2);
+          if (j < p.length) {
+            c.steps[j] = 1;
+            posats++;
+          }
+        }
+        if (posats === 0 && forts[0] + 1 < p.length) c.steps[forts[0] + 1] = 1;
+      },
     ],
     sound: {
       caixa: (r) => ({ decay: 0.12 + r() * 0.08 }),
