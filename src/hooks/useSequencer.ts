@@ -5,6 +5,7 @@ import { createKit, type DrumKit } from "@/lib/kit";
 import {
   clonePattern,
   emptyLane,
+  applyMacroAssignment,
   isAudible,
   KINDS,
   PRESETS,
@@ -12,6 +13,7 @@ import {
   type Cell,
   type ChannelMix,
   type Pattern,
+  type Macro,
   type Track,
   type VoiceParams,
 } from "@/lib/pattern";
@@ -191,6 +193,26 @@ export function useSequencer() {
     [editTrack],
   );
 
+  /** Moure un macro escriu els paràmetres de totes les seves destinacions. */
+  const setMacro = useCallback(
+    (index: number, changes: Partial<Macro>) => {
+      const prev = patternRef.current;
+      const anterior = prev.macros[index];
+      if (!anterior) return;
+      const macro = { ...anterior, ...changes };
+      const next = clonePattern(prev);
+      next.macros[index] = macro;
+      for (const a of macro.assignments) {
+        const t = next.tracks.find((x) => x.id === a.trackId);
+        if (!t) continue;
+        t.sound = applyMacroAssignment(t, a, macro.value);
+        kitRef.current?.setParams(t.id, t.sound);
+      }
+      setPattern(next);
+    },
+    [],
+  );
+
   const setBpm = useCallback((bpm: number) => {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
   }, []);
@@ -252,6 +274,7 @@ export function useSequencer() {
     clearLane,
     setChannel,
     setSound,
+    setMacro,
     setBpm,
     setSwing,
     loadPattern,

@@ -36,6 +36,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   cadena de síntesi.
 - Cap fitxer d'àudio: tot es sintetitza a `src/lib/kit.ts`.
 - La UI és en català. El text nou, també.
+- Abans de tocar cap component, llegeix `.claude/skills/audio-ui/SKILL.md`: hi ha la
+  disposició del panell de so i les regles de knobs, anells i macros.
+- Cap valor numèric fix sota els knobs: el número surt al globus mentre s'arrossega.
 - No tocar la paleta, les tipografies ni el layout de la consola si no ho demanen.
 
 ## On va cada cosa
@@ -51,8 +54,11 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - `src/components/TrackLane.tsx` — una fila: nom, M/S, volum i els passos. Rep un
   `Track` sencer.
 - `src/components/StepButton.tsx` — una cel·la i el mapa `FACE` d'aparença per valor.
-- `src/components/VoicePanel.tsx` — els quatre comandaments de so d'una veu. Només
-  presentació: rep `VoiceParams` i retorna canvis.
+- `src/components/SoundPanel.tsx` — el panell de so en tres bandes (cadena, fonts de
+  modulació, editor de la família). Només presentació: rep un `Track` i retorna canvis.
+- `src/components/Knob.tsx` — el knob d'SVG, amb anell de modulació opcional. Etiqueta a
+  sota i valor només al globus mentre s'arrossega, mai fix.
+- `src/components/FilterDisplay.tsx`, `ModStrip.tsx`, `Macros.tsx` — les peces del panell.
 - `src/components/PatternBank.tsx` — presets, sortejar, buidar i el desat al navegador.
 - `src/hooks/useSequencer.ts` — tot l'estat del patró i tot Tone: transport, seqüència,
   edicions. Cap component no ha de tocar Tone pel seu compte.
@@ -61,6 +67,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   nivell, densitat). **Afegir una veu nova és afegir-hi una entrada i una fàbrica**: cap
   altre fitxer no ha de tenir tipus de veu escrits a mà.
 - `src/lib/theory.ts` — escales, acords i noms de nota. Encara no hi ha res connectat.
+- `src/lib/filter.ts` — la resposta en freqüència dels biquads, per dibuixar-la. Fórmules
+  del RBJ Cookbook, provades contra punts coneguts.
 - `src/lib/kit.ts` — un registre de cadenes per `track.id`: `ensureTrack`, `removeTrack`,
   `trigger`, `setVolume`, `setParams`. No sap res de cap veu concreta; les demana a
   `voices.ts`. Rep el mòdul Tone per paràmetre, cosa que permet provar-lo amb un Tone
@@ -78,15 +86,28 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 ## Sospitós / pendent
 
-- El refactor a pistes dinàmiques està verificat al navegador: la consola és idèntica,
-  els patrons desats amb el model antic migren bé (n'hi ha un de real al `localStorage`
-  de localhost:3000), i els quatre tipus deterministes (bombo, aro, timbal, cencerro)
-  donen el mateix dBFS al decimal que abans. Les veus de soroll varien fins a 2,8 dB
-  entre dispars idèntics, o sigui que allà la mesura no distingeix.
+- El panell de so està verificat al navegador de punta a punta: tancar el tall de 20 kHz a
+  20 Hz baixa el bombo 12,3 dB, i arrossegar l'anell amb una font triada escriu la
+  modulació sense moure el valor del knob.
+- **Modulacions que es desen però encara no sonen.** Només s'apliquen `velocitat` i
+  `atzar` cap a qualsevol destinació (en disparar), i `LFO 1`/`LFO 2` cap al tall (en
+  temps d'àudio). Assignar `Env Amp` o `Env Filtre` des de la tira, o un LFO cap a
+  afinació, caiguda o saturació, queda guardat al patró i no fa res. L'envolupant de
+  filtre sí que funciona pel seu knob de "quantitat".
+- **L'editor ADSR no té gràfic**: el skill demana punts arrossegables *i* knobs, i de
+  moment només hi ha els knobs.
+- Les veus metàl·liques (aro, cencerro) no tenen node Filter: el tall hi escriu la
+  `resonance` del MetalSynth, que és una propietat i no un senyal, o sigui que allà no hi
+  ha ni envolupant de filtre ni LFO.
+- Els presets sonen igual: bombo, aro, timbal i cencerro donen el mateix dBFS al decimal
+  abans i després. Les veus de soroll varien fins a 2,8 dB entre dispars idèntics, o sigui
+  que allà la mesura no distingeix.
 - Per mesurar el so: pengeu un `AnalyserNode` de la destinació sobreescrivint
-  `AudioNode.prototype.connect` abans del primer gest. Compte, hi ha uns 125 ms de
-  latència entre el dispar i el senyal; si mesures abans, sembla que no soni res.
-- `lib/theory.ts` existeix i està provat però encara no el fa servir ningú.
+  `AudioNode.prototype.connect` abans del primer gest. Hi ha uns 125 ms de latència.
+- El playhead es queda encès al darrer pas en aturar el transport: hi ha crides de
+  `Tone.getDraw()` ja programades que arriben després de l'`stop()`. Ve d'abans d'aquests
+  canvis.
 - Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
-  escenes, i les pistes melòdiques (baix i acords).
+  escenes, les pistes melòdiques (baix i acords) i la gestió de pistes (+ Pista, menú,
+  sends, retorns, pan i vúmetres).
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

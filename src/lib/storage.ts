@@ -1,14 +1,30 @@
 import {
   clonePattern,
+  defaultFilter,
+  defaultMacros,
   defaultMix,
   defaultParams,
   defaultTracks,
   emptyLane,
   emptyPattern,
   KINDS,
+  LFO_SHAPES,
+  MOD_SOURCES,
+  MOD_TARGETS,
+  SYNC_RATES,
   type Cell,
   type ChannelMix,
+  type EnvParams,
+  type FilterParams,
+  type LfoParams,
+  type LfoShape,
+  type Macro,
+  type MacroAssignment,
+  type Mod,
+  type ModSource,
+  type ModTarget,
   type Pattern,
+  type SyncRate,
   type Track,
   type VoiceKind,
   type VoiceParams,
@@ -68,17 +84,132 @@ function normaliseMix(mix: unknown): ChannelMix {
   };
 }
 
+const num = (v: unknown, fallback: number) =>
+  typeof v === "number" && Number.isFinite(v) ? v : fallback;
+
+/**
+ * La fórmula del comandament "to" que hi havia abans del panell de so: un
+ * recorregut geomètric al voltant del filtre de fàbrica, amb 0,5 al centre.
+ * Es conserva només per convertir els patrons desats amb aquella versió.
+ */
+function toneAntic(base: number, tone: number, ceiling = base * 4): number {
+  const floor = base / 4;
+  const top = Math.min(base * 4, ceiling);
+  return tone < 0.5
+    ? floor * Math.pow(base / floor, tone * 2)
+    : base * Math.pow(top / base, (tone - 0.5) * 2);
+}
+
+function normaliseFilter(kind: VoiceKind, raw: unknown, tone: unknown): FilterParams {
+  const base = defaultFilter(kind);
+  if (isObject(raw)) {
+    const type = raw.type;
+    return {
+      type:
+        type === "lowpass" || type === "highpass" || type === "bandpass"
+          ? type
+          : base.type,
+      cutoff: Math.max(20, Math.min(20000, num(raw.cutoff, base.cutoff))),
+      q: Math.max(0.1, Math.min(20, num(raw.q, base.q))),
+    };
+  }
+  // patró d'abans del panell: el "to" es converteix en freqüència de tall
+  if (typeof tone === "number" && Number.isFinite(tone)) {
+    const sostre = kind === "aro" ? 7000 : undefined;
+    return { ...base, cutoff: toneAntic(base.cutoff, tone, sostre) };
+  }
+  return base;
+}
+
+function normaliseEnv(kind: VoiceKind, raw: unknown): EnvParams {
+  const base = defaultParams(kind).envFilter;
+  if (!isObject(raw)) return base;
+  return {
+    attack: num(raw.attack, base.attack),
+    decay: num(raw.decay, base.decay),
+    sustain: Math.max(0, Math.min(1, num(raw.sustain, base.sustain))),
+    release: num(raw.release, base.release),
+    amount: Math.max(0, Math.min(1, num(raw.amount, base.amount))),
+  };
+}
+
+function normaliseLfos(kind: VoiceKind, raw: unknown): LfoParams[] {
+  const base = defaultParams(kind).lfo;
+  if (!Array.isArray(raw)) return base;
+  // el model no en desa més de MAX_LFO, per molt que n'hi arribin
+  return base.map((fabrica, i) => {
+    const v = raw[i];
+    if (!isObject(v)) return fabrica;
+    const shape = v.shape;
+    const rate = v.rate;
+    return {
+      shape: LFO_SHAPES.includes(shape as LfoShape)
+        ? (shape as LfoShape)
+        : fabrica.shape,
+      rate: SYNC_RATES.includes(rate as SyncRate)
+        ? (rate as SyncRate)
+        : fabrica.rate,
+      depth: Math.max(0, Math.min(1, num(v.depth, fabrica.depth))),
+    };
+  });
+}
+
+function normaliseMods(raw: unknown): Mod[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Mod[] = [];
+  for (const v of raw) {
+    if (!isObject(v)) continue;
+    if (!MOD_SOURCES.includes(v.source as ModSource)) continue;
+    if (!MOD_TARGETS.includes(v.target as ModTarget)) continue;
+    out.push({
+      source: v.source as ModSource,
+      target: v.target as ModTarget,
+      amount: Math.max(-1, Math.min(1, num(v.amount, 0))),
+    });
+  }
+  return out;
+}
+
 function normaliseSound(kind: VoiceKind, sound: unknown): VoiceParams {
   const base = defaultParams(kind);
   if (!isObject(sound)) return base;
-  const num = (v: unknown, fallback: number) =>
-    typeof v === "number" && Number.isFinite(v) ? v : fallback;
   return {
     pitch: num(sound.pitch, base.pitch),
     decay: num(sound.decay, base.decay),
-    tone: num(sound.tone, base.tone),
-    drive: num(sound.drive, base.drive),
+    drive: Math.max(0, Math.min(1, num(sound.drive, base.drive))),
+    filter: normaliseFilter(kind, sound.filter, sound.tone),
+    envFilter: normaliseEnv(kind, sound.envFilter),
+    lfo: normaliseLfos(kind, sound.lfo),
+    mods: normaliseMods(sound.mods),
   };
+}
+
+/** Com a màxim MAX_MACROS, i cadascun amb les assignacions que s'entenguin. */
+function normaliseMacros(raw: unknown): Macro[] {
+  const base = defaultMacros();
+  if (!Array.isArray(raw)) return base;
+  return base.map((fabrica, i) => {
+    const v = raw[i];
+    if (!isObject(v)) return fabrica;
+    const assignacions = Array.isArray(v.assignments)
+      ? v.assignments.flatMap((a): MacroAssignment[] => {
+          if (!isObject(a) || typeof a.trackId !== "string") return [];
+          if (!MOD_TARGETS.includes(a.param as ModTarget)) return [];
+          return [
+            {
+              trackId: a.trackId,
+              param: a.param as ModTarget,
+              amount: Math.max(-1, Math.min(1, num(a.amount, 0))),
+            },
+          ];
+        })
+      : [];
+    return {
+      name: typeof v.name === "string" && v.name ? v.name : fabrica.name,
+      value: Math.max(0, Math.min(1, num(v.value, 0))),
+      assignments: assignacions,
+    };
+  });
 }
 
 /**
@@ -100,6 +231,7 @@ function fromLegacy(old: LegacyPattern): Pattern {
       mix: normaliseMix(old.mix?.[kind]),
       sound: normaliseSound(kind, old.sound?.[kind]),
     })),
+    macros: defaultMacros(),
   };
 }
 
@@ -142,6 +274,7 @@ export function normalise(value: unknown): Pattern {
       bpm: typeof value.bpm === "number" ? value.bpm : 104,
       swing: typeof value.swing === "number" ? value.swing : 0,
       tracks: tracks.length > 0 ? tracks : defaultTracks(),
+      macros: normaliseMacros(value.macros),
     };
   }
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PatternBank } from "./PatternBank";
 import { TrackLane } from "./TrackLane";
 import { Transport } from "./Transport";
-import { VoicePanel } from "./VoicePanel";
+import { SoundPanel } from "./SoundPanel";
 import { useSequencer } from "@/hooks/useSequencer";
 import { isAudible } from "@/lib/pattern";
 
@@ -134,13 +134,31 @@ export function Console() {
           </div>
         </div>
 
-        {openTrack ? (
-          <VoicePanel
-            track={openTrack}
-            onChange={(changes) => seq.setSound(openTrack.id, changes)}
-            onClose={() => setSoundTrack(null)}
-          />
-        ) : null}
+        {/* El panell inferior és una zona amb pestanyes, no una franja d'un sol ús. */}
+        <div className="border-t border-ink/15">
+          <div className="flex gap-1 px-4 pt-2 sm:px-6">
+            <button
+              type="button"
+              aria-pressed
+              className="border-b-2 border-oxblood bg-panel-hi px-2 py-1 text-[13px] text-ink"
+            >
+              So
+            </button>
+          </div>
+          {openTrack ? (
+            <SoundPanel
+              track={openTrack}
+              tracks={tracks}
+              macros={seq.pattern.macros}
+              onChange={(changes) => seq.setSound(openTrack.id, changes)}
+              onMacro={seq.setMacro}
+            />
+          ) : (
+            <p className="px-4 py-3 text-[13px] text-ink-soft sm:px-6">
+              Clica el nom d&apos;una pista per veure&apos;n els comandaments de so.
+            </p>
+          )}
+        </div>
 
         <PatternBank
           pattern={seq.pattern}

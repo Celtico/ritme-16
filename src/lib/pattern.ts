@@ -1,7 +1,11 @@
 import {
+  DECAY_MAX,
+  DECAY_MIN,
   defaultParams,
   KINDS,
+  MAX_MACROS,
   VOICE_KINDS,
+  type ModTarget,
   type VoiceKind,
   type VoiceParams,
 } from "./voices";
@@ -11,11 +15,35 @@ export const STEPS = 16;
 export {
   DECAY_MAX,
   DECAY_MIN,
+  defaultFilter,
   defaultParams,
+  FAMILY_COLOR,
   KINDS,
+  LFO_SHAPES,
+  MAX_LFO,
+  MAX_MACROS,
+  MOD_SOURCES,
+  MOD_TARGETS,
+  SOURCE_FAMILY,
+  SOURCE_NAMES,
+  SYNC_RATES,
+  TARGET_NAMES,
   VOICE_KINDS,
 } from "./voices";
-export type { VoiceKind, VoiceParams } from "./voices";
+export type {
+  BlockId,
+  EnvParams,
+  FilterParams,
+  FilterType,
+  LfoParams,
+  LfoShape,
+  Mod,
+  ModSource,
+  ModTarget,
+  SyncRate,
+  VoiceKind,
+  VoiceParams,
+} from "./voices";
 
 /** 0 = silenci, 1 = normal, 2 = accent */
 export type Cell = 0 | 1 | 2;
@@ -41,12 +69,78 @@ export interface Track {
   sound: VoiceParams;
 }
 
+/** Una assignació de macro: quin paràmetre de quina pista, i quant. */
+export interface MacroAssignment {
+  trackId: string;
+  param: ModTarget;
+  /** -1..1 */
+  amount: number;
+}
+
+/**
+ * Els macros viuen al patró i no a la pista, perquè el sentit que tenen és
+ * justament moure coses de pistes diferents alhora. Aplicar-ne un és escriure
+ * els paràmetres de destinació: no hi ha cap node d'àudio de macro.
+ */
+export interface Macro {
+  name: string;
+  /** 0..1 */
+  value: number;
+  assignments: MacroAssignment[];
+}
+
+export function defaultMacros(): Macro[] {
+  return Array.from({ length: MAX_MACROS }, (_, i) => ({
+    name: `Macro ${i + 1}`,
+    value: 0,
+    assignments: [],
+  }));
+}
+
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, v));
+
+/**
+ * Aplicar un macro és escriure els paràmetres de destinació; no hi ha cap node
+ * d'àudio de macro. El càlcul es fa sempre des del valor de fàbrica de la veu,
+ * no des del que hi hagi ara: així el macro no va derivant cada cop que es mou
+ * i, tornant-lo a zero, la veu queda com estava.
+ */
+export function applyMacroAssignment(
+  track: Track,
+  assignment: MacroAssignment,
+  value: number,
+): VoiceParams {
+  const base = defaultParams(track.kind);
+  const amount = assignment.amount * value;
+  const s = { ...track.sound };
+  switch (assignment.param) {
+    case "cutoff":
+      s.filter = {
+        ...s.filter,
+        cutoff: clamp(base.filter.cutoff * Math.pow(4, amount), 20, 20000),
+      };
+      break;
+    case "pitch":
+      s.pitch = clamp(Math.round(base.pitch + amount * 12), -12, 12);
+      break;
+    case "decay":
+      s.decay = clamp(base.decay * Math.pow(4, amount), DECAY_MIN, DECAY_MAX);
+      break;
+    case "drive":
+      s.drive = clamp(base.drive + amount, 0, 1);
+      break;
+  }
+  return s;
+}
+
 export interface Pattern {
   name: string;
   bpm: number;
   /** 0 = recte, 0.6 = molt swingat */
   swing: number;
   tracks: Track[];
+  macros: Macro[];
 }
 
 export function emptyLane(): Cell[] {
@@ -80,7 +174,13 @@ export function defaultTracks(): Track[] {
 }
 
 export function emptyPattern(name = "Sense títol"): Pattern {
-  return { name, bpm: 104, swing: 0, tracks: defaultTracks() };
+  return {
+    name,
+    bpm: 104,
+    swing: 0,
+    tracks: defaultTracks(),
+    macros: defaultMacros(),
+  };
 }
 
 export function cloneTrack(t: Track): Track {
@@ -88,7 +188,13 @@ export function cloneTrack(t: Track): Track {
     ...t,
     steps: [...t.steps],
     mix: { ...t.mix },
-    sound: { ...t.sound },
+    sound: {
+      ...t.sound,
+      filter: { ...t.sound.filter },
+      envFilter: { ...t.sound.envFilter },
+      lfo: t.sound.lfo.map((l) => ({ ...l })),
+      mods: t.sound.mods.map((m) => ({ ...m })),
+    },
   };
 }
 
@@ -98,6 +204,10 @@ export function clonePattern(p: Pattern): Pattern {
     bpm: p.bpm,
     swing: p.swing,
     tracks: p.tracks.map(cloneTrack),
+    macros: p.macros.map((m) => ({
+      ...m,
+      assignments: m.assignments.map((a) => ({ ...a })),
+    })),
   };
 }
 

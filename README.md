@@ -57,18 +57,24 @@ que és el que fa que un patró recte soni humà.
 
 ## El so de cada veu es toca
 
-Clicar el nom d'una veu obre els seus quatre comandaments, que es desen amb el
-patró:
+Clicar el nom d'una pista obre el panell de so, que es desa amb el patró. Té
+tres bandes, i la de dalt segueix l'ordre del senyal:
 
-| Comandament | Què fa |
-| --- | --- |
-| Afinació | −12 a +12 semitons. A les veus de soroll, que no tenen cap to que afinar, mou el filtre: és el gest equivalent |
-| Caiguda | de 20 ms a 1,5 s |
-| To | fosc o brillant. El 50 % és exactament el filtre de fàbrica: per sota baixa dues octaves, per sobre puja fins al sostre de la veu |
-| Saturació | de net a aplanat, amb un `Distortion` per veu abans del bus |
+**La cadena.** Oscil·lador (afinació), Filtre (tall, ressonància, tipus, amb la
+resposta dibuixada de debò), Drive (saturació) i Amp (caiguda). Cada veu només
+mostra els blocs que té: les de soroll pur no tenen res que afinar.
+
+**Les fonts de modulació.** Env Amp, Env Filtre, LFO 1, LFO 2, Velocitat i
+Atzar. Triant-ne una, cada comandament mostra un anell exterior; arrossegant-lo
+s'hi encamina la font, de −100 a +100 %.
+
+**L'editor.** Pestanyes per família: envolupants, LFO i atzar.
+
+A la dreta hi ha quatre macros, que són del patró i no de la pista: un de sol
+pot moure paràmetres de pistes diferents alhora.
 
 Cap comandament no recrea nodes: tots escriuen sobre la cadena que ja sona. Els
-valors per defecte reprodueixen el so original, i el botó «De fàbrica» hi torna.
+valors per defecte reprodueixen el so original, i «De fàbrica» hi torna.
 
 ## Veus
 

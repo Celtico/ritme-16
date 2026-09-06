@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyMacroAssignment,
   clonePattern,
   DECAY_MAX,
   DECAY_MIN,
@@ -10,6 +11,9 @@ import {
   makeTrack,
   PRESETS,
   STEPS,
+  MAX_LFO,
+  MAX_MACROS,
+  MOD_TARGETS,
   VOICE_KINDS,
   anySolo,
   isAudible,
@@ -79,13 +83,52 @@ describe("pistes", () => {
 });
 
 describe("comandaments de so per defecte", () => {
-  it("deixa el to al centre i la saturació fora, que és el so de fàbrica", () => {
+  it("deixa la veu neta: sense saturació, sense envolupant de filtre i sense LFO", () => {
     for (const kind of VOICE_KINDS) {
       const p = defaultParams(kind);
       expect(p.pitch, kind).toBe(0);
-      expect(p.tone, kind).toBe(0.5);
       expect(p.drive, kind).toBe(0);
+      expect(p.envFilter.amount, kind).toBe(0);
+      expect(p.mods, kind).toEqual([]);
+      for (const l of p.lfo) expect(l.depth, kind).toBe(0);
     }
+  });
+
+  it("posa el filtre de cada veu al que ja tenia la seva cadena", () => {
+    const esperat: Record<string, [string, number]> = {
+      bombo: ["lowpass", 12000],
+      caixa: ["highpass", 1500],
+      palmada: ["bandpass", 1100],
+      charles: ["highpass", 7200],
+      charlesObert: ["highpass", 7200],
+      aro: ["highpass", 5200],
+      timbal: ["lowpass", 12000],
+      cencerro: ["highpass", 900],
+    };
+    for (const kind of VOICE_KINDS) {
+      const f = defaultParams(kind).filter;
+      expect([f.type, f.cutoff], kind).toEqual(esperat[kind]);
+    }
+  });
+
+  it("no dona mai més de dos LFO", () => {
+    for (const kind of VOICE_KINDS) {
+      expect(defaultParams(kind).lfo.length, kind).toBeLessThanOrEqual(MAX_LFO);
+    }
+  });
+
+  it("dona quatre macros buides al patró", () => {
+    const p = emptyPattern();
+    expect(p.macros).toHaveLength(MAX_MACROS);
+    for (const m of p.macros) expect(m.assignments).toEqual([]);
+  });
+
+  it("clona els macros sense compartir-ne les assignacions", () => {
+    const a = emptyPattern();
+    a.macros[0].assignments.push({ trackId: "bombo", param: "cutoff", amount: 1 });
+    const b = clonePattern(a);
+    b.macros[0].assignments[0].amount = -1;
+    expect(a.macros[0].assignments[0].amount).toBe(1);
   });
 
   it("dona a cada veu la caiguda que tenia la cadena, dins del marge", () => {
@@ -104,6 +147,58 @@ describe("comandaments de so per defecte", () => {
       expect(decay, kind).toBe(esperat[kind]);
       expect(decay, kind).toBeGreaterThanOrEqual(DECAY_MIN);
       expect(decay, kind).toBeLessThanOrEqual(DECAY_MAX);
+    }
+  });
+});
+
+describe("macros", () => {
+  it("torna la veu al valor de fàbrica quan el macro és a zero", () => {
+    const p = emptyPattern();
+    const t = p.tracks[0];
+    const so = applyMacroAssignment(
+      t,
+      { trackId: t.id, param: "cutoff", amount: 1 },
+      0,
+    );
+    expect(so.filter.cutoff).toBe(defaultParams(t.kind).filter.cutoff);
+  });
+
+  it("no va derivant si es mou dues vegades seguides", () => {
+    const p = emptyPattern();
+    const t = p.tracks[0];
+    const a = { trackId: t.id, param: "cutoff" as const, amount: 1 };
+    t.sound = applyMacroAssignment(t, a, 0.5);
+    const primer = t.sound.filter.cutoff;
+    t.sound = applyMacroAssignment(t, a, 0.5);
+    expect(t.sound.filter.cutoff).toBe(primer);
+  });
+
+  it("puja i baixa segons el signe de la quantitat", () => {
+    const p = emptyPattern();
+    const t = p.tracks[1];
+    const base = defaultParams(t.kind).filter.cutoff;
+    const amunt = applyMacroAssignment(t, { trackId: t.id, param: "cutoff", amount: 1 }, 1);
+    const avall = applyMacroAssignment(t, { trackId: t.id, param: "cutoff", amount: -1 }, 1);
+    expect(amunt.filter.cutoff).toBeGreaterThan(base);
+    expect(avall.filter.cutoff).toBeLessThan(base);
+  });
+
+  it("no se'n va mai fora dels límits de cada paràmetre", () => {
+    const p = emptyPattern();
+    for (const t of p.tracks) {
+      for (const param of MOD_TARGETS) {
+        for (const amount of [-1, 1]) {
+          const so = applyMacroAssignment(t, { trackId: t.id, param, amount }, 1);
+          expect(so.filter.cutoff, `${t.id} ${param}`).toBeGreaterThanOrEqual(20);
+          expect(so.filter.cutoff).toBeLessThanOrEqual(20000);
+          expect(so.drive).toBeGreaterThanOrEqual(0);
+          expect(so.drive).toBeLessThanOrEqual(1);
+          expect(so.pitch).toBeGreaterThanOrEqual(-12);
+          expect(so.pitch).toBeLessThanOrEqual(12);
+          expect(so.decay).toBeGreaterThanOrEqual(DECAY_MIN);
+          expect(so.decay).toBeLessThanOrEqual(DECAY_MAX);
+        }
+      }
     }
   });
 });

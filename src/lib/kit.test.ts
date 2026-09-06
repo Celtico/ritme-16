@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createKit } from "./kit";
-import { VOICE_KINDS } from "./voices";
+import { defaultParams, VOICE_KINDS } from "./voices";
 
 type ToneModule = typeof import("tone");
 
@@ -40,7 +40,37 @@ function toneFals(reg: Registre) {
     Distortion: class {
       constructor() { return node({ distortion: 0, wet: { value: 0 } }); }
     },
-    Filter: class { constructor() { return node({ frequency: { value: 0 } }); } },
+    Filter: class {
+      constructor() {
+        return node({ frequency: { value: 0 }, Q: { value: 0 }, type: "lowpass" });
+      }
+    },
+    FrequencyEnvelope: class {
+      constructor() {
+        return node({
+          baseFrequency: 0,
+          octaves: 0,
+          attack: 0,
+          decay: 0,
+          sustain: 0,
+          release: 0,
+          triggerAttackRelease: () => {},
+        });
+      }
+    },
+    LFO: class {
+      constructor() {
+        const n = node({
+          frequency: { value: 0 },
+          min: 0,
+          max: 0,
+          type: "sine",
+          start: () => n,
+        });
+        Object.assign(n, { sync: () => n });
+        return n;
+      }
+    },
     MembraneSynth: class { constructor() { return synth("membrana"); } },
     NoiseSynth: class { constructor() { return synth("soroll"); } },
     MetalSynth: class { constructor() { return synth("metall"); } },
@@ -94,7 +124,7 @@ describe("registre de pistes del kit", () => {
     expect(() => kit.trigger("fantasma", 0, 1)).not.toThrow();
     expect(() => kit.setVolume("fantasma", -6)).not.toThrow();
     expect(() =>
-      kit.setParams("fantasma", { pitch: 0, decay: 0.2, tone: 0.5, drive: 0 }),
+      kit.setParams("fantasma", defaultParams("bombo")),
     ).not.toThrow();
     expect(() => kit.removeTrack("fantasma")).not.toThrow();
     expect(reg.disparats).toEqual([]);
