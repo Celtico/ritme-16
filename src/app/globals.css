@@ -197,6 +197,9 @@ input[type="range"] {
   appearance: none;
   background: transparent;
   cursor: pointer;
+  /* El polze fa 18 px i puja amb un margin-top negatiu: si la caixa és més
+     baixa, en sobresurt i el contenidor desborda dos píxels. */
+  height: 18px;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {

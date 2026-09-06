@@ -49,7 +49,7 @@ export function Transport({
   const beat = currentStep < 0 ? 0 : Math.floor(currentStep / 4) + 1;
 
   return (
-    <div className="flex h-[52px] items-center gap-4 border-b border-header bg-header px-3 text-on-accent">
+    <div className="flex h-[52px] items-center gap-4 border-b border-header bg-header pl-3 pr-4 text-on-accent">
       <h1 className="font-display text-[15px] tracking-tight">RITME-16</h1>
 
       <button
@@ -74,7 +74,7 @@ export function Transport({
         )}
       </button>
 
-      <div className="flex items-center gap-2">
+      <div className="flex h-full items-center gap-2">
         <span className="font-display text-xl leading-none tabular-nums">
           {bpm}
         </span>
@@ -90,7 +90,7 @@ export function Transport({
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex h-full items-center gap-2">
         <span className="font-display text-base leading-none tabular-nums">
           {Math.round(swing * 100)}%
         </span>
@@ -162,13 +162,15 @@ export function Transport({
         </button>
       </div>
 
+      {/* el commutador i els llums van junts, separats de la resta */}
+      <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
       <button
         type="button"
         onClick={() => onTheme(theme === "night" ? "day" : "night")}
         aria-pressed={theme === "night"}
         title={theme === "night" ? "Passar al tema dia" : "Passar al tema nit"}
         aria-label={theme === "night" ? "Passar al tema dia" : "Passar al tema nit"}
-        className="ml-auto h-7 w-7 shrink-0 rounded-[3px] border border-on-accent/30 text-[13px] leading-none text-on-accent transition-colors hover:bg-on-accent/15"
+        className="h-7 w-7 shrink-0 rounded-[3px] border border-on-accent/30 text-[13px] leading-none text-on-accent transition-colors hover:bg-on-accent/15"
       >
         {theme === "night" ? "☾" : "☀"}
       </button>
@@ -183,6 +185,7 @@ export function Transport({
             ].join(" ")}
           />
         ))}
+      </div>
       </div>
     </div>
   );
