@@ -4,13 +4,12 @@ import {
   DECAY_MAX,
   DECAY_MIN,
   defaultParams,
-  type VoiceMeta,
+  type Track,
   type VoiceParams,
 } from "@/lib/pattern";
 
 interface Props {
-  voice: VoiceMeta;
-  params: VoiceParams;
+  track: Track;
   onChange: (changes: Partial<VoiceParams>) => void;
   onClose: () => void;
 }
@@ -52,8 +51,9 @@ function Knob({
   );
 }
 
-export function VoicePanel({ voice, params, onChange, onClose }: Props) {
-  const factory = defaultParams(voice.id);
+export function VoicePanel({ track, onChange, onClose }: Props) {
+  const params = track.sound;
+  const factory = defaultParams(track.kind);
   const untouched =
     params.pitch === factory.pitch &&
     params.decay === factory.decay &&
@@ -64,7 +64,7 @@ export function VoicePanel({ voice, params, onChange, onClose }: Props) {
     <div className="border-t border-ink/15 bg-panel-lo/25 px-4 py-3 sm:px-6">
       <div className="mb-2 flex items-center gap-3">
         <h2 className="font-display text-[15px] tracking-tight text-ink">
-          So de {voice.name.toLowerCase()}
+          So de {track.name.toLowerCase()}
         </h2>
         <button
           type="button"

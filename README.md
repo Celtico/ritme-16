@@ -29,8 +29,10 @@ d'exemple (`PRESETS`) estan definits al codi.
 
 ```
 src/
-  lib/pattern.ts       model del patró, veus i patrons d'exemple
-  lib/kit.ts           les vuit veus: cadenes de síntesi i disparadors
+  lib/pattern.ts       model del patró: pistes, barreja i patrons d'exemple
+  lib/voices.ts        una fàbrica per tipus de veu; afegir-ne una és afegir-hi una funció
+  lib/kit.ts           registre de cadenes de síntesi, una per pista
+  lib/theory.ts        escales i acords (encara sense connectar)
   lib/storage.ts       desar/carregar amb validació del que ve del navegador
   hooks/useSequencer.ts transport de Tone, seqüència i totes les edicions
   components/          consola, transport, files, panell de so, banc de patrons

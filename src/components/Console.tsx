@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PatternBank } from "./PatternBank";
 import { TrackLane } from "./TrackLane";
 import { Transport } from "./Transport";
 import { VoicePanel } from "./VoicePanel";
 import { useSequencer } from "@/hooks/useSequencer";
-import { VOICES, type VoiceId } from "@/lib/pattern";
+import { isAudible } from "@/lib/pattern";
 
 function StepRuler({ currentStep }: { currentStep: number }) {
   return (
@@ -43,10 +43,20 @@ function StepRuler({ currentStep }: { currentStep: number }) {
 
 export function Console() {
   const seq = useSequencer();
-  const [soundVoice, setSoundVoice] = useState<VoiceId | null>(null);
-  const anySolo = VOICES.some((v) => seq.pattern.mix[v.id].solo);
-  const openVoice = VOICES.find((v) => v.id === soundVoice);
+  const [soundTrack, setSoundTrack] = useState<string | null>(null);
+  const { tracks } = seq.pattern;
+  const openTrack = tracks.find((t) => t.id === soundTrack);
+
+  // Les vuit primeres pistes reben les tecles 1-8, en ordre.
+  const hotkeys = new Map(tracks.slice(0, 8).map((t, i) => [t.id, String(i + 1)]));
   const { toggleTransport, audition } = seq;
+
+  // el handler de teclat viu tota la vida del component: llegeix les pistes
+  // d'una ref per no haver-se de tornar a lligar a cada edició
+  const tracksRef = useRef(tracks);
+  useEffect(() => {
+    tracksRef.current = tracks;
+  }, [tracks]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -71,8 +81,9 @@ export function Console() {
         if (!e.repeat) toggleTransport();
         return;
       }
-      const voice = VOICES.find((v) => v.key === e.key);
-      if (voice) void audition(voice.id);
+      const index = Number(e.key) - 1;
+      const track = index >= 0 && index < 8 ? tracksRef.current[index] : undefined;
+      if (track) void audition(track.id);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -101,38 +112,33 @@ export function Console() {
         <div className="overflow-x-auto px-4 py-3 sm:px-6">
           <div className="min-w-max">
             <StepRuler currentStep={seq.currentStep} />
-            {VOICES.map((voice) => (
+            {tracks.map((track) => (
               <TrackLane
-                key={voice.id}
-                voice={voice}
-                cells={seq.pattern.steps[voice.id]}
-                mix={seq.pattern.mix[voice.id]}
+                key={track.id}
+                track={track}
+                hotkey={hotkeys.get(track.id)}
                 currentStep={seq.currentStep}
-                dimmed={
-                  seq.pattern.mix[voice.id].muted ||
-                  (anySolo && !seq.pattern.mix[voice.id].solo)
-                }
+                dimmed={!isAudible(seq.pattern, track)}
                 onToggleStep={(index, accent) =>
-                  seq.toggleStep(voice.id, index, accent)
+                  seq.toggleStep(track.id, index, accent)
                 }
-                onChangeMix={(changes) => seq.setChannel(voice.id, changes)}
-                onAudition={() => void seq.audition(voice.id)}
+                onChangeMix={(changes) => seq.setChannel(track.id, changes)}
+                onAudition={() => void seq.audition(track.id)}
                 onOpenSound={() =>
-                  setSoundVoice((v) => (v === voice.id ? null : voice.id))
+                  setSoundTrack((v) => (v === track.id ? null : track.id))
                 }
-                onClear={() => seq.clearLane(voice.id)}
-                soundOpen={soundVoice === voice.id}
+                onClear={() => seq.clearLane(track.id)}
+                soundOpen={soundTrack === track.id}
               />
             ))}
           </div>
         </div>
 
-        {openVoice ? (
+        {openTrack ? (
           <VoicePanel
-            voice={openVoice}
-            params={seq.pattern.sound[openVoice.id]}
-            onChange={(changes) => seq.setSound(openVoice.id, changes)}
-            onClose={() => setSoundVoice(null)}
+            track={openTrack}
+            onChange={(changes) => seq.setSound(openTrack.id, changes)}
+            onClose={() => setSoundTrack(null)}
           />
         ) : null}
 

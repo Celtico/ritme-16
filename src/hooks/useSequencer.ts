@@ -4,13 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createKit, type DrumKit } from "@/lib/kit";
 import {
   clonePattern,
-  emptyPattern,
+  emptyLane,
+  isAudible,
+  KINDS,
   PRESETS,
   STEPS,
-  VOICES,
   type Cell,
+  type ChannelMix,
   type Pattern,
-  type VoiceId,
+  type Track,
   type VoiceParams,
 } from "@/lib/pattern";
 
@@ -22,11 +24,12 @@ type StepSequence = import("tone").Sequence<number>;
 const ACCENT_VELOCITY = 1;
 const NORMAL_VELOCITY = 0.6;
 
-/** Aboca al kit tot el que el patró diu de cada veu: volum i comandaments. */
-function applyMix(kit: DrumKit, p: Pattern) {
-  for (const v of VOICES) {
-    kit.setVolume(v.id, p.mix[v.id].volume);
-    kit.setParams(v.id, p.sound[v.id]);
+/** Aboca al kit tot el que el patró diu de cada pista. */
+function applyTracks(kit: DrumKit, p: Pattern) {
+  for (const t of p.tracks) {
+    kit.ensureTrack(t.id, t.kind);
+    kit.setVolume(t.id, t.mix.volume);
+    kit.setParams(t.id, t.sound);
   }
 }
 
@@ -56,8 +59,9 @@ export function useSequencer() {
     await Tone.start();
     if (!kitRef.current) {
       kitRef.current = createKit(Tone);
-      applyMix(kitRef.current, patternRef.current);
     }
+    // les pistes poden haver canviat des de l'últim cop
+    applyTracks(kitRef.current, patternRef.current);
     setAudioReady(true);
     return { Tone, kit: kitRef.current };
   }, []);
@@ -74,14 +78,11 @@ export function useSequencer() {
       seqRef.current = new Tone.Sequence(
         (time, step) => {
           const p = patternRef.current;
-          const anySolo = VOICES.some((v) => p.mix[v.id].solo);
-          for (const v of VOICES) {
-            const cell = p.steps[v.id][step];
-            if (!cell) continue;
-            const ch = p.mix[v.id];
-            if (ch.muted || (anySolo && !ch.solo)) continue;
+          for (const t of p.tracks) {
+            const cell = t.steps[step];
+            if (!cell || !isAudible(p, t)) continue;
             kit.trigger(
-              v.id,
+              t.id,
               time,
               cell === 2 ? ACCENT_VELOCITY : NORMAL_VELOCITY,
             );
@@ -133,56 +134,61 @@ export function useSequencer() {
 
   // --- Edició -----------------------------------------------------------
 
-  const toggleStep = useCallback(
-    (voice: VoiceId, index: number, accent = false) => {
+  /** Reescriu una pista pel seu id, deixant la resta del patró intacta. */
+  const editTrack = useCallback(
+    (id: string, change: (t: Track) => void) => {
       setPattern((prev) => {
         const next = clonePattern(prev);
-        const current = next.steps[voice][index];
-        let value: Cell;
-        if (accent) value = current === 2 ? 1 : 2;
-        else value = current === 0 ? 1 : 0;
-        next.steps[voice][index] = value;
+        const track = next.tracks.find((t) => t.id === id);
+        if (!track) return prev;
+        change(track);
         return next;
       });
     },
     [],
   );
 
-  const clearLane = useCallback((voice: VoiceId) => {
-    setPattern((prev) => {
-      const next = clonePattern(prev);
-      next.steps[voice] = Array<Cell>(STEPS).fill(0);
-      return next;
-    });
-  }, []);
-
-  const setChannel = useCallback(
-    (voice: VoiceId, changes: Partial<Pattern["mix"][VoiceId]>) => {
-      if (changes.volume !== undefined) {
-        kitRef.current?.setVolume(voice, changes.volume);
-      }
-      setPattern((prev) => {
-        const next = clonePattern(prev);
-        next.mix[voice] = { ...next.mix[voice], ...changes };
-        return next;
+  const toggleStep = useCallback(
+    (id: string, index: number, accent = false) => {
+      editTrack(id, (t) => {
+        const current = t.steps[index];
+        t.steps[index] = accent
+          ? current === 2
+            ? 1
+            : 2
+          : current === 0
+            ? 1
+            : 0;
       });
     },
-    [],
+    [editTrack],
+  );
+
+  const clearLane = useCallback(
+    (id: string) => editTrack(id, (t) => (t.steps = emptyLane())),
+    [editTrack],
+  );
+
+  const setChannel = useCallback(
+    (id: string, changes: Partial<ChannelMix>) => {
+      if (changes.volume !== undefined) {
+        kitRef.current?.setVolume(id, changes.volume);
+      }
+      editTrack(id, (t) => (t.mix = { ...t.mix, ...changes }));
+    },
+    [editTrack],
   );
 
   const setSound = useCallback(
-    (voice: VoiceId, changes: Partial<VoiceParams>) => {
-      // el kit ha de sentir el canvi ara, no al proper render; com a
-      // setChannel, l'efecte va fora de l'actualitzador d'estat
-      const next = { ...patternRef.current.sound[voice], ...changes };
-      kitRef.current?.setParams(voice, next);
-      setPattern((prev) => {
-        const p = clonePattern(prev);
-        p.sound[voice] = next;
-        return p;
-      });
+    (id: string, changes: Partial<VoiceParams>) => {
+      // el kit ha de sentir el canvi ara, no al proper render
+      const previ = patternRef.current.tracks.find((t) => t.id === id);
+      if (!previ) return;
+      const next = { ...previ.sound, ...changes };
+      kitRef.current?.setParams(id, next);
+      editTrack(id, (t) => (t.sound = next));
     },
-    [],
+    [editTrack],
   );
 
   const setBpm = useCallback((bpm: number) => {
@@ -196,51 +202,40 @@ export function useSequencer() {
   const loadPattern = useCallback((p: Pattern) => {
     const next = clonePattern(p);
     setPattern(next);
-    if (kitRef.current) applyMix(kitRef.current, next);
+    if (kitRef.current) applyTracks(kitRef.current, next);
   }, []);
 
   const clearAll = useCallback(() => {
-    setPattern((prev) => {
-      const next = emptyPattern("Sense títol");
-      next.bpm = prev.bpm;
-      next.swing = prev.swing;
-      next.mix = clonePattern(prev).mix;
-      return next;
-    });
+    setPattern((prev) => ({
+      ...clonePattern(prev),
+      name: "Sense títol",
+      tracks: prev.tracks.map((t) => ({ ...t, steps: emptyLane() })),
+    }));
   }, []);
 
-  /** Genera alguna cosa tocable, no soroll: cada veu té la seva densitat. */
+  /** Genera alguna cosa tocable, no soroll: cada tipus de veu té la seva densitat. */
   const randomise = useCallback(() => {
-    const density: Record<VoiceId, number> = {
-      bombo: 0.22,
-      caixa: 0.12,
-      palmada: 0.08,
-      charles: 0.45,
-      charlesObert: 0.06,
-      aro: 0.1,
-      timbal: 0.07,
-      cencerro: 0.05,
-    };
     setPattern((prev) => {
       const next = clonePattern(prev);
-      for (const v of VOICES) {
-        next.steps[v.id] = Array.from({ length: STEPS }, (_, i) => {
+      for (const t of next.tracks) {
+        t.steps = Array.from({ length: STEPS }, (_, i) => {
           const onBeat = i % 4 === 0;
-          const chance = density[v.id] * (onBeat ? 2.4 : 1);
+          const chance = KINDS[t.kind].density * (onBeat ? 2.4 : 1);
           if (Math.random() > chance) return 0 as Cell;
           return (onBeat && Math.random() < 0.4 ? 2 : 1) as Cell;
         });
       }
       // garanteix un punt d'ancoratge al primer temps
-      next.steps.bombo[0] = 2;
+      const primer = next.tracks.find((t) => t.kind === "bombo") ?? next.tracks[0];
+      if (primer) primer.steps[0] = 2;
       return next;
     });
   }, []);
 
   const audition = useCallback(
-    async (voice: VoiceId) => {
+    async (id: string) => {
       const { Tone, kit } = await ensureAudio();
-      kit.trigger(voice, Tone.now(), ACCENT_VELOCITY);
+      kit.trigger(id, Tone.now(), ACCENT_VELOCITY);
     },
     [ensureAudio],
   );

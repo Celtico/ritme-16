@@ -1,84 +1,44 @@
+import {
+  defaultParams,
+  KINDS,
+  VOICE_KINDS,
+  type VoiceKind,
+  type VoiceParams,
+} from "./voices";
+
 export const STEPS = 16;
 
-export type VoiceId =
-  | "bombo"
-  | "caixa"
-  | "palmada"
-  | "charles"
-  | "charlesObert"
-  | "aro"
-  | "timbal"
-  | "cencerro";
-
-export interface VoiceMeta {
-  id: VoiceId;
-  /** Nom curt visible a la consola */
-  name: string;
-  /** Tecla d'audició ràpida (1..8) */
-  key: string;
-}
-
-export const VOICES: VoiceMeta[] = [
-  { id: "bombo", name: "Bombo", key: "1" },
-  { id: "caixa", name: "Caixa", key: "2" },
-  { id: "palmada", name: "Palmada", key: "3" },
-  { id: "charles", name: "Charles", key: "4" },
-  { id: "charlesObert", name: "Charles obert", key: "5" },
-  { id: "aro", name: "Aro", key: "6" },
-  { id: "timbal", name: "Timbal", key: "7" },
-  { id: "cencerro", name: "Cencerro", key: "8" },
-];
+export {
+  DECAY_MAX,
+  DECAY_MIN,
+  defaultParams,
+  KINDS,
+  VOICE_KINDS,
+} from "./voices";
+export type { VoiceKind, VoiceParams } from "./voices";
 
 /** 0 = silenci, 1 = normal, 2 = accent */
 export type Cell = 0 | 1 | 2;
 
-/**
- * Els quatre comandaments de so de cada veu. Els valors per defecte
- * reprodueixen exactament el so de fàbrica: `tone` 0,5 és el centre del
- * recorregut i `drive` 0 deixa la saturació completament fora.
- */
-export interface VoiceParams {
-  /** Semitons, -12..+12. A les veus de soroll mou el filtre en comptes del to. */
-  pitch: number;
-  /** Caiguda de l'envolupant, en segons. */
-  decay: number;
-  /** 0..1 de fosc a brillant; 0,5 és el filtre tal com ve de fàbrica. */
-  tone: number;
-  /** 0..1 de net a saturat. */
-  drive: number;
-}
-
-/** Marge del control de caiguda. El mínim baixa fins a 0,02 s perquè el
- * charles (0,045) i l'aro (0,035) ja hi són per sota i no han de canviar. */
-export const DECAY_MIN = 0.02;
-export const DECAY_MAX = 1.5;
-
-/** La caiguda de fàbrica de cada veu, tal com estava escrita a kit.ts. */
-const FACTORY_DECAY: Record<VoiceId, number> = {
-  bombo: 0.42,
-  caixa: 0.17,
-  palmada: 0.11,
-  charles: 0.045,
-  charlesObert: 0.38,
-  aro: 0.035,
-  timbal: 0.34,
-  cencerro: 0.3,
-};
-
-export function defaultParams(id: VoiceId): VoiceParams {
-  return { pitch: 0, decay: FACTORY_DECAY[id], tone: 0.5, drive: 0 };
-}
-
-export function defaultSound(): Record<VoiceId, VoiceParams> {
-  return Object.fromEntries(
-    VOICES.map((v) => [v.id, defaultParams(v.id)]),
-  ) as Record<VoiceId, VoiceParams>;
-}
-
 export interface ChannelMix {
-  volume: number; // dB, de -40 a +6
+  volume: number; // dB, de -32 a +6
   muted: boolean;
   solo: boolean;
+}
+
+/**
+ * Una pista del patró. L'ordre de l'array `tracks` és l'ordre visual, i `id`
+ * és el que fa servir el kit per trobar la seva cadena de síntesi.
+ */
+export interface Track {
+  id: string;
+  name: string;
+  kind: VoiceKind;
+  /** Nom d'un color de la paleta de globals.css. */
+  color: string;
+  steps: Cell[];
+  mix: ChannelMix;
+  sound: VoiceParams;
 }
 
 export interface Pattern {
@@ -86,36 +46,49 @@ export interface Pattern {
   bpm: number;
   /** 0 = recte, 0.6 = molt swingat */
   swing: number;
-  steps: Record<VoiceId, Cell[]>;
-  mix: Record<VoiceId, ChannelMix>;
-  sound: Record<VoiceId, VoiceParams>;
+  tracks: Track[];
 }
 
-function emptyLane(): Cell[] {
+export function emptyLane(): Cell[] {
   return Array<Cell>(STEPS).fill(0);
 }
 
-export function emptySteps(): Record<VoiceId, Cell[]> {
-  return Object.fromEntries(VOICES.map((v) => [v.id, emptyLane()])) as Record<
-    VoiceId,
-    Cell[]
-  >;
+export function defaultMix(): ChannelMix {
+  return { volume: 0, muted: false, solo: false };
 }
 
-export function defaultMix(): Record<VoiceId, ChannelMix> {
-  return Object.fromEntries(
-    VOICES.map((v) => [v.id, { volume: 0, muted: false, solo: false }]),
-  ) as Record<VoiceId, ChannelMix>;
+/**
+ * Una pista nova del tipus demanat. L'id per defecte és el tipus mateix, que
+ * és el que fa que els patrons migrats i els presets tinguin ids estables;
+ * quan se n'afegeixin de repetides caldrà passar-n'hi un d'únic.
+ */
+export function makeTrack(kind: VoiceKind, id: string = kind): Track {
+  return {
+    id,
+    name: KINDS[kind].name,
+    kind,
+    color: KINDS[kind].color,
+    steps: emptyLane(),
+    mix: defaultMix(),
+    sound: defaultParams(kind),
+  };
+}
+
+/** Una pista per tipus de veu, en l'ordre en què els declara voices.ts. */
+export function defaultTracks(): Track[] {
+  return VOICE_KINDS.map((k) => makeTrack(k));
 }
 
 export function emptyPattern(name = "Sense títol"): Pattern {
+  return { name, bpm: 104, swing: 0, tracks: defaultTracks() };
+}
+
+export function cloneTrack(t: Track): Track {
   return {
-    name,
-    bpm: 104,
-    swing: 0,
-    steps: emptySteps(),
-    mix: defaultMix(),
-    sound: defaultSound(),
+    ...t,
+    steps: [...t.steps],
+    mix: { ...t.mix },
+    sound: { ...t.sound },
   };
 }
 
@@ -124,23 +97,29 @@ export function clonePattern(p: Pattern): Pattern {
     name: p.name,
     bpm: p.bpm,
     swing: p.swing,
-    steps: Object.fromEntries(
-      Object.entries(p.steps).map(([k, v]) => [k, [...v]]),
-    ) as Record<VoiceId, Cell[]>,
-    mix: Object.fromEntries(
-      Object.entries(p.mix).map(([k, v]) => [k, { ...v }]),
-    ) as Record<VoiceId, ChannelMix>,
-    sound: Object.fromEntries(
-      Object.entries(p.sound).map(([k, v]) => [k, { ...v }]),
-    ) as Record<VoiceId, VoiceParams>,
+    tracks: p.tracks.map(cloneTrack),
   };
+}
+
+export function findTrack(p: Pattern, id: string): Track | undefined {
+  return p.tracks.find((t) => t.id === id);
+}
+
+/** Hi ha alguna pista en solitari? Determina qui calla i qui sona. */
+export function anySolo(p: Pattern): boolean {
+  return p.tracks.some((t) => t.mix.solo);
+}
+
+export function isAudible(p: Pattern, t: Track): boolean {
+  if (t.mix.muted) return false;
+  return !anySolo(p) || t.mix.solo;
 }
 
 /**
  * Escriu una línia a partir d'una cadena de 16 caràcters.
  * "." = silenci, "x" = normal, "X" = accent. Molt més llegible que un array.
  */
-function lane(spec: string): Cell[] {
+export function lane(spec: string): Cell[] {
   const cells = emptyLane();
   for (let i = 0; i < Math.min(spec.length, STEPS); i++) {
     const c = spec[i];
@@ -153,13 +132,14 @@ function build(
   name: string,
   bpm: number,
   swing: number,
-  lanes: Partial<Record<VoiceId, string>>,
+  lanes: Partial<Record<VoiceKind, string>>,
 ): Pattern {
   const p = emptyPattern(name);
   p.bpm = bpm;
   p.swing = swing;
-  for (const [id, spec] of Object.entries(lanes)) {
-    p.steps[id as VoiceId] = lane(spec as string);
+  for (const [kind, spec] of Object.entries(lanes)) {
+    const track = p.tracks.find((t) => t.kind === (kind as VoiceKind));
+    if (track) track.steps = lane(spec as string);
   }
   return p;
 }

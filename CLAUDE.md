@@ -31,6 +31,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   l'estat directament des del fil d'àudio.
 - Les cel·les tenen tres valors: `0` silenci, `1` normal, `2` accent. L'accent només
   canvia la velocitat de disparament, res més.
+- El patró és una llista de pistes (`Pattern.tracks`), no registres indexats per veu.
+  L'ordre de l'array és l'ordre visual i `track.id` és el que lliga la pista amb la seva
+  cadena de síntesi.
 - Cap fitxer d'àudio: tot es sintetitza a `src/lib/kit.ts`.
 - La UI és en català. El text nou, també.
 - No tocar la paleta, les tipografies ni el layout de la consola si no ho demanen.
@@ -45,17 +48,23 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   (espai, 1–8). Cap crida a Tone.
 - `src/components/Transport.tsx` — play/stop, tempo, swing, llums de compàs. Només
   presentació: rep valors i callbacks.
-- `src/components/TrackLane.tsx` — una fila: nom, M/S, volum i els passos.
+- `src/components/TrackLane.tsx` — una fila: nom, M/S, volum i els passos. Rep un
+  `Track` sencer.
 - `src/components/StepButton.tsx` — una cel·la i el mapa `FACE` d'aparença per valor.
 - `src/components/VoicePanel.tsx` — els quatre comandaments de so d'una veu. Només
   presentació: rep `VoiceParams` i retorna canvis.
 - `src/components/PatternBank.tsx` — presets, sortejar, buidar i el desat al navegador.
 - `src/hooks/useSequencer.ts` — tot l'estat del patró i tot Tone: transport, seqüència,
   edicions. Cap component no ha de tocar Tone pel seu compte.
-- `src/lib/pattern.ts` — el model pur: tipus, `VOICES`, `PRESETS`. Sense React ni Tone.
-- `src/lib/kit.ts` — les vuit cadenes de síntesi, `LEVELS` (la barreja) i `setParams`,
-  que aplica els comandaments en directe. Rep el mòdul Tone per paràmetre; no se
-  l'importa ell mateix. Res d'aquí no ha de recrear nodes per un canvi de paràmetre.
+- `src/lib/pattern.ts` — el model pur: `Track`, `Pattern`, `PRESETS`. Sense React ni Tone.
+- `src/lib/voices.ts` — una fàbrica per tipus de veu i la taula `KINDS` (nom, color,
+  nivell, densitat). **Afegir una veu nova és afegir-hi una entrada i una fàbrica**: cap
+  altre fitxer no ha de tenir tipus de veu escrits a mà.
+- `src/lib/theory.ts` — escales, acords i noms de nota. Encara no hi ha res connectat.
+- `src/lib/kit.ts` — un registre de cadenes per `track.id`: `ensureTrack`, `removeTrack`,
+  `trigger`, `setVolume`, `setParams`. No sap res de cap veu concreta; les demana a
+  `voices.ts`. Rep el mòdul Tone per paràmetre, cosa que permet provar-lo amb un Tone
+  fals. Res d'aquí no ha de recrear nodes per un canvi de paràmetre.
 - `src/lib/storage.ts` — `localStorage` i la validació del que en surt. Sense React.
 
 ## Com treballar
@@ -69,14 +78,15 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 
 ## Sospitós / pendent
 
-- Verificat al navegador amb un `AnalyserNode` penjat de la destinació (cal sobreescriure
-  `AudioNode.prototype.connect` abans del primer gest): els quatre comandaments mouen el
-  senyal de debò — afinació ×2 a +12 semitons, caiguda 430→220 ms, saturació baixa el
-  factor de cresta de 3,6 a 2,1, i el to puja el centre espectral d'11 a 17 kHz.
-- Els presets sonen igual que abans de la Fase 1: bombo, aro, timbal i cencerro donen el
-  mateix dBFS al decimal. Les veus de soroll varien fins a 2,8 dB entre dispars idèntics,
-  o sigui que allà la mesura no distingeix; s'ha comprovat que la desviació observada és
-  menor que aquesta dispersió.
-- Compte en mesurar: hi ha uns 125 ms de latència entre el dispar i el senyal a
-  l'analitzador. Si mesures abans, sembla que no soni res.
+- El refactor a pistes dinàmiques està verificat al navegador: la consola és idèntica,
+  els patrons desats amb el model antic migren bé (n'hi ha un de real al `localStorage`
+  de localhost:3000), i els quatre tipus deterministes (bombo, aro, timbal, cencerro)
+  donen el mateix dBFS al decimal que abans. Les veus de soroll varien fins a 2,8 dB
+  entre dispars idèntics, o sigui que allà la mesura no distingeix.
+- Per mesurar el so: pengeu un `AnalyserNode` de la destinació sobreescrivint
+  `AudioNode.prototype.connect` abans del primer gest. Compte, hi ha uns 125 ms de
+  latència entre el dispar i el senyal; si mesures abans, sembla que no soni res.
+- `lib/theory.ts` existeix i està provat però encara no el fa servir ningú.
+- Pendent d'encàrrecs anteriors, no fet: el banc de 8 patrons amb follow actions, les
+  escenes, i les pistes melòdiques (baix i acords).
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

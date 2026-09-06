@@ -1,12 +1,12 @@
 "use client";
 
 import { StepButton } from "./StepButton";
-import type { Cell, ChannelMix, VoiceMeta } from "@/lib/pattern";
+import type { ChannelMix, Track } from "@/lib/pattern";
 
 interface Props {
-  voice: VoiceMeta;
-  cells: Cell[];
-  mix: ChannelMix;
+  track: Track;
+  /** Tecla d'audició ràpida, si la pista n'ha rebut una. */
+  hotkey?: string;
   currentStep: number;
   dimmed: boolean;
   onToggleStep: (index: number, accent: boolean) => void;
@@ -49,9 +49,8 @@ function MiniToggle({
 }
 
 export function TrackLane({
-  voice,
-  cells,
-  mix,
+  track,
+  hotkey,
   currentStep,
   dimmed,
   onToggleStep,
@@ -61,6 +60,8 @@ export function TrackLane({
   onClear,
   soundOpen,
 }: Props) {
+  const { name, steps: cells, mix } = track;
+  const escoltar = hotkey ? `Escoltar ${name} (tecla ${hotkey})` : `Escoltar ${name}`;
   const groups = [0, 1, 2, 3];
 
   return (
@@ -74,8 +75,8 @@ export function TrackLane({
         <button
           type="button"
           onClick={onAudition}
-          aria-label={`Escoltar ${voice.name} (tecla ${voice.key})`}
-          title={`Escoltar ${voice.name} (tecla ${voice.key})`}
+          aria-label={escoltar}
+          title={escoltar}
           className="h-6 w-5 shrink-0 rounded-[3px] border border-ink/25 bg-panel-hi text-[9px] leading-none text-ink transition-colors hover:bg-white"
         >
           ▶
@@ -86,7 +87,7 @@ export function TrackLane({
           onClick={onOpenSound}
           onDoubleClick={onClear}
           aria-expanded={soundOpen}
-          title={`So de ${voice.name} · doble clic per buidar la fila`}
+          title={`So de ${name} · doble clic per buidar la fila`}
           className={[
             "w-[92px] truncate rounded-[3px] border px-2 py-1.5 text-left text-[13px] text-ink transition-colors",
             soundOpen
@@ -94,7 +95,7 @@ export function TrackLane({
               : "border-ink/25 bg-panel-hi hover:bg-white",
           ].join(" ")}
         >
-          {voice.name}
+          {name}
         </button>
 
         <MiniToggle
@@ -118,7 +119,7 @@ export function TrackLane({
           max={6}
           step={1}
           value={mix.volume}
-          aria-label={`Volum de ${voice.name}`}
+          aria-label={`Volum de ${name}`}
           onChange={(e) => onChangeMix({ volume: Number(e.target.value) })}
           className="w-12"
         />
@@ -134,7 +135,7 @@ export function TrackLane({
                   key={index}
                   cell={cell}
                   index={index}
-                  voiceName={voice.name}
+                  voiceName={name}
                   underPlayhead={currentStep === index}
                   onToggle={(accent) => onToggleStep(index, accent)}
                 />
