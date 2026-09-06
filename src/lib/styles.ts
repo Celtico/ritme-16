@@ -214,7 +214,18 @@ export const STYLES: StyleSpec[] = [
       cencerro: { density: [0, 0.05, 0.15, 0.05], accent: 0.2, optional: true },
       palmada: { density: [0, 0, 0.12, 0], accent: 0.3, optional: true },
     },
-    rules: [(p) => nomesA(p, "bombo", temps(p))],
+    rules: [
+      (p) => nomesA(p, "bombo", temps(p)),
+      // El charles és pràcticament l'única altra veu i, amb densitat mitja
+      // al temps fort, dos dels quatre bombos en porten un a sobre. En
+      // techno això s'empassa el transitori, que és de què viu l'estil.
+      (p) => {
+        const h = veu(p, "charles");
+        const k = veu(p, "bombo");
+        if (!h || !k) return;
+        for (let i = 0; i < p.length; i++) if (k.steps[i]) h.steps[i] = 0;
+      },
+    ],
     sound: {
       // curt i brut: el techno viu del transitori
       bombo: (r) => ({ decay: 0.16 + r() * 0.1, drive: 0.25 + r() * 0.35 }),

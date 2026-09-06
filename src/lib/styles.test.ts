@@ -211,6 +211,18 @@ describe("les regles de gènere se senten al resultat", () => {
     }
   });
 
+  it("techno: cap charles a sobre d'un bombo", () => {
+    // quinze de vint llavors ho feien abans d'aquesta regla
+    for (const seed of [1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18, 19, 20]) {
+      const p = generate(styleById("techno")!, seed).song.slots[0].pattern;
+      const h = p.tracks.find((t) => t.kind === "charles")!;
+      const k = p.tracks.find((t) => t.kind === "bombo")!;
+      for (let i = 0; i < p.length; i++) {
+        expect(h.steps[i] && k.steps[i], `llavor ${seed}, pas ${i}`).toBeFalsy();
+      }
+    }
+  });
+
   it("trip-hop: decay llarg i tall baix al bombo", () => {
     for (let seed = 1; seed <= 20; seed++) {
       const p = generate(styleById("triphop")!, seed).song.slots[0].pattern;
