@@ -13,7 +13,7 @@ percussió sintetitzades en temps real amb Tone.js, sense cap sample. Next.js 15
 | `npm run dev` | provar-ho de veritat; l'àudio només es pot comprovar aquí |
 | `npm run build` | abans de tancar una tasca que toqui rutes, fonts o layout |
 | `npm run typecheck` | després de qualsevol canvi a `.ts`/`.tsx` |
-| `npm run lint` | ídem (encara no existeix: cal afegir eslint-config-next) |
+| `npm run lint` | ídem; `next build` també hi falla, o sigui que val més passar-hi abans |
 | `npm test` | tests de `src/lib` (encara no existeix: cal afegir Vitest) |
 
 Abans de donar una tasca per acabada, `typecheck` i `lint` han de passar nets.
