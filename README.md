@@ -53,6 +53,18 @@ reverberació i B cap a un retard sincronitzat al tempo. Els dos retorns són le
 dues files del final, amb els seus controls i el seu silenci. A la dreta de cada
 fila hi ha un vúmetre, que només es mou mentre sona el transport.
 
+## Ranures i escenes
+
+El banc A–H té vuit ranures, cadascuna amb el seu patró. La que sona es marca
+en ocre, i cada ranura porta la seva acció: repetir-se, passar a la següent,
+saltar a una concreta o triar-ne una a l'atzar, cada 1, 2, 4 o 8 compassos. El
+canvi es decideix al darrer pas del patró, o sigui que no se sent cap tall.
+
+Les escenes, al costat, són conjunts de silencis i solitaris amb nom. El botó
+«+» desa els d'ara i deixa l'escena activa; a partir d'aquell moment, tocar un
+M o un S la modifica. **Per fer-ne una de diferent, duplica-la primer amb «+» i
+edita-la després**: si edites abans, estaràs reescrivint la que tenies.
+
 «Copiar enllaç» posa el patró sencer dins l'adreça. Obrint-la, es carrega i
 el paràmetre desapareix de la barra d'adreces, perquè recarregar no te'l
 torni a imposar per damunt del que hagis fet des de llavors. Un preset ocupa

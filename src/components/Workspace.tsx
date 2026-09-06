@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AddTrack } from "./AddTrack";
 import { PatternBank } from "./PatternBank";
 import { ReturnRows } from "./ReturnRows";
+import { SceneColumn } from "./SceneColumn";
 import { SlotBank } from "./SlotBank";
 import { SoundPanel } from "./SoundPanel";
 import { MelodyRow } from "./MelodyRow";
@@ -180,13 +181,24 @@ export function Workspace() {
         onSwing={seq.setSwing}
       />
 
-      <SlotBank
-        song={seq.song}
-        onSelect={seq.selectSlot}
-        onFollow={seq.setFollow}
-        onCopy={seq.copySlot}
-        onClear={seq.clearSlot}
-      />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-ink/15">
+        <SlotBank
+          song={seq.song}
+          onSelect={seq.selectSlot}
+          onFollow={seq.setFollow}
+          onCopy={seq.copySlot}
+          onClear={seq.clearSlot}
+        />
+        <div className="px-3 py-1.5">
+          <SceneColumn
+            pattern={seq.pattern}
+            onApply={seq.applyScene}
+            onSave={seq.saveScene}
+            onRename={seq.renameScene}
+            onRemove={seq.removeScene}
+          />
+        </div>
+      </div>
 
       {/* centre: passos a l'esquerra, llista de pistes a la dreta */}
       <div

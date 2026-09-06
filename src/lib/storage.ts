@@ -8,6 +8,7 @@ import {
   DEFAULT_KEY,
   emptyBass,
   isPatternLength,
+  MAX_SCENES,
   STEPS,
   emptyChords,
   BASS_MAX_LENGTH,
@@ -37,6 +38,7 @@ import {
   type ModTarget,
   type Pattern,
   type Returns,
+  type Scene,
   type SyncRate,
   type Track,
   type VoiceKind,
@@ -278,6 +280,8 @@ function fromLegacy(old: LegacyPattern): Pattern {
     returns: defaultReturns(),
     key: { ...DEFAULT_KEY },
     length: STEPS,
+    scenes: [],
+    activeScene: null,
   };
 }
 
@@ -361,6 +365,24 @@ function netejaSolapaments<T extends { length: number } | null>(
   return files;
 }
 
+/** Les escenes desades. Com a màxim MAX_SCENES, i cada barreja validada. */
+function normaliseScenes(raw: unknown): Scene[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Scene[] = [];
+  for (const v of raw.slice(0, MAX_SCENES)) {
+    if (!isObject(v)) continue;
+    const mix: Record<string, ChannelMix> = {};
+    if (isObject(v.mix)) {
+      for (const [id, m] of Object.entries(v.mix)) mix[id] = normaliseMix(m);
+    }
+    out.push({
+      name: typeof v.name === "string" && v.name ? v.name : `Escena ${out.length + 1}`,
+      mix,
+    });
+  }
+  return out;
+}
+
 function normaliseTrack(raw: unknown, index: number): Track | null {
   if (!isObject(raw)) return null;
   const kind = VOICE_KINDS.includes(raw.kind as VoiceKind)
@@ -407,6 +429,14 @@ export function normalise(value: unknown): Pattern {
       key: normaliseKey(value.key),
       // els patrons anteriors a la llargada variable en tenien setze
       length: isPatternLength(value.length) ? value.length : STEPS,
+      scenes: normaliseScenes(value.scenes),
+      activeScene:
+        typeof value.activeScene === "number" &&
+        Array.isArray(value.scenes) &&
+        value.activeScene >= 0 &&
+        value.activeScene < value.scenes.length
+          ? value.activeScene
+          : null,
     };
   }
 

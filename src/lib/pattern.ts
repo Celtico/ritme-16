@@ -105,6 +105,19 @@ export interface DelayReturn {
   muted: boolean;
 }
 
+/**
+ * Una escena és quines veus sonen: un conjunt de barreges amb nom. La
+ * barreja que hi ha ara al patró és l'escena activa, i editar un M o un S la
+ * modifica.
+ */
+export interface Scene {
+  name: string;
+  /** Per id de pista. Les que no hi siguin es queden com estan. */
+  mix: Record<string, ChannelMix>;
+}
+
+export const MAX_SCENES = 8;
+
 export interface Returns {
   a: ReverbReturn;
   b: DelayReturn;
@@ -250,6 +263,10 @@ export interface Pattern {
   key: Key;
   /** Quants passos sonen. Les files en guarden sempre MAX_STEPS. */
   length: PatternLength;
+  /** Com a màxim MAX_SCENES. */
+  scenes: Scene[];
+  /** Quina escena està aplicada, si n'hi ha cap. */
+  activeScene: number | null;
 }
 
 export function emptyLane(): Cell[] {
@@ -303,6 +320,8 @@ export function emptyPattern(name = "Sense títol"): Pattern {
     returns: defaultReturns(),
     key: DEFAULT_KEY,
     length: STEPS,
+    scenes: [],
+    activeScene: null,
   };
 }
 
@@ -336,6 +355,13 @@ export function clonePattern(p: Pattern): Pattern {
     returns: { a: { ...p.returns.a }, b: { ...p.returns.b } },
     key: { ...p.key },
     length: p.length,
+    scenes: p.scenes.map((e) => ({
+      name: e.name,
+      mix: Object.fromEntries(
+        Object.entries(e.mix).map(([k, v]) => [k, { ...v }]),
+      ),
+    })),
+    activeScene: p.activeScene,
   };
 }
 

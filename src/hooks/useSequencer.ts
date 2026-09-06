@@ -4,6 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createKit, type DrumKit, type TrackLevels } from "@/lib/kit";
 import { renderPattern } from "@/lib/render";
 import {
+  addScene,
+  applyScene as applySceneTo,
+  removeScene as removeSceneFrom,
+  renameScene as renameSceneIn,
+  syncActiveScene,
+} from "@/lib/scenes";
+import {
   cloneSong,
   currentPattern,
   emptySong,
@@ -135,10 +142,19 @@ export function useSequencer() {
             const { every } = s.slots[s.current].follow;
             if (barsRef.current - lastSwitchRef.current >= every) {
               lastSwitchRef.current = barsRef.current;
+              const { scene } = s.slots[s.current].follow;
               const seguent = resolveFollow(s, s.current);
-              if (seguent !== s.current) {
-                const nova = { ...s, current: seguent };
+              if (seguent !== s.current || scene !== undefined) {
+                const nova = cloneSong(s);
+                nova.current = seguent;
+                if (scene !== undefined) {
+                  nova.slots[seguent].pattern = applySceneTo(
+                    nova.slots[seguent].pattern,
+                    scene,
+                  );
+                }
                 songRef.current = nova;
+                if (kit) applyTracks(kit, currentPattern(nova));
                 Tone.getDraw().schedule(() => setSong(nova), time);
               }
             }
@@ -238,8 +254,10 @@ export function useSequencer() {
       if (changes.volume !== undefined) kitRef.current?.setVolume(id, mix.volume);
       kitRef.current?.setRouting(id, mix);
       editTrack(id, (t) => (t.mix = mix));
+      // els M i els S modifiquen l'escena activa, si n'hi ha cap
+      setPattern(syncActiveScene);
     },
-    [editTrack],
+    [editTrack, setPattern],
   );
 
   const setReturns = useCallback((changes: Partial<Returns>) => {
@@ -411,6 +429,38 @@ export function useSequencer() {
     [commitSong],
   );
 
+  // --- Escenes -------------------------------------------------------------
+
+  const saveScene = useCallback(
+    (name: string) => setPattern((p) => addScene(p, name)),
+    [setPattern],
+  );
+
+  const applyScene = useCallback(
+    (index: number) =>
+      commitSong((s) => {
+        const next = cloneSong(s);
+        next.slots[next.current].pattern = applySceneTo(
+          next.slots[next.current].pattern,
+          index,
+        );
+        if (kitRef.current) applyTracks(kitRef.current, currentPattern(next));
+        return next;
+      }),
+    [commitSong],
+  );
+
+  const renameScene = useCallback(
+    (index: number, name: string) =>
+      setPattern((p) => renameSceneIn(p, index, name)),
+    [setPattern],
+  );
+
+  const removeScene = useCallback(
+    (index: number) => setPattern((p) => removeSceneFrom(p, index)),
+    [setPattern],
+  );
+
   const setBpm = useCallback((bpm: number) => {
     setPattern((prev) => ({ ...prev, bpm: Math.min(200, Math.max(40, bpm)) }));
   }, [setPattern]);
@@ -516,6 +566,10 @@ export function useSequencer() {
     setFollow,
     copySlot,
     clearSlot,
+    saveScene,
+    applyScene,
+    renameScene,
+    removeScene,
     randomise,
     audition,
     exportWav,

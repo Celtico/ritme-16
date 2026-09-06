@@ -46,7 +46,7 @@ export function SlotBank({ song, onSelect, onFollow, onCopy, onClear }: Props) {
   const actual = song.slots[song.current];
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-ink/15 px-3 py-1.5">
+    <div className="flex flex-wrap items-center gap-2 px-3 py-1.5">
       <div className="flex gap-1">
         {song.slots.map((slot, i) => {
           const sona = i === song.current;

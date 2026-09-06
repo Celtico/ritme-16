@@ -131,6 +131,8 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
 - `src/lib/song.ts` — el banc de vuit ranures i les follow actions. `resolveFollow()` és
   pura i rep el generador d'atzar per paràmetre, per poder-la provar dues vegades igual.
 - `src/components/SlotBank.tsx` — la fila A–H amb l'acció i el copia/enganxa.
+- `src/lib/scenes.ts` — desar, aplicar i sincronitzar escenes. Operacions pures.
+- `src/components/SceneColumn.tsx` — les escenes, al costat del banc.
 - `src/lib/share.ts` — el patró dins d'un paràmetre d'adreça. Sense cap API del
   navegador (ni `btoa`, ni `Buffer`), perquè el còdec es pugui provar sencer i doni el
   mateix a tot arreu. En descodificar passa sempre per `normalise`.
@@ -175,5 +177,10 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   neta i tornen els passos, els accents, el baix, la tonalitat, la llargada i el tempo.
 - El banc A–H està verificat sonant: 76 passos observats sense cap salt irregular, tots
   els canvis de ranura al pas 15, i cap silenci més llarg que el que hi ha entre bombos.
-- Pendent, no fet: les escenes.
+- Les escenes estan verificades al navegador: dues escenes amb barreges diferents es
+  recuperen totes dues en tots dos sentits.
+- **L'escena activa segueix el que toques**: després de desar-la, un M o un S la
+  modifiquen. Per fer-ne una de diferent cal duplicar-la amb «+» i editar després; si
+  s'edita abans, es reescriu la que hi havia. Ve de l'encàrrec i no és un descuit, però
+  no és evident.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

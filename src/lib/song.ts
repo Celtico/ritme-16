@@ -7,11 +7,18 @@ export const SLOT_NAMES = ["A", "B", "C", "D", "E", "F", "G", "H"];
 export const EVERY_OPTIONS = [1, 2, 4, 8] as const;
 export type Every = (typeof EVERY_OPTIONS)[number];
 
+/** El que comparteixen totes les accions. `scene` és opcional: si hi és,
+ * en canviar de ranura també s'hi aplica aquella escena. */
+interface FollowBase {
+  every: Every;
+  scene?: number;
+}
+
 export type FollowAction =
-  | { kind: "loop"; every: Every }
-  | { kind: "next"; every: Every }
-  | { kind: "goto"; every: Every; slot: number }
-  | { kind: "random"; every: Every; candidates: number[] };
+  | ({ kind: "loop" } & FollowBase)
+  | ({ kind: "next" } & FollowBase)
+  | ({ kind: "goto"; slot: number } & FollowBase)
+  | ({ kind: "random"; candidates: number[] } & FollowBase);
 
 export const FOLLOW_KINDS = ["loop", "next", "goto", "random"] as const;
 export type FollowKind = (typeof FOLLOW_KINDS)[number];
