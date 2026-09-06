@@ -259,20 +259,19 @@ export const STYLES: StyleSpec[] = [
         nomesA(p, "charlesObert", passos, 1);
       },
       (p) => afegeixA(p, "caixa", dosIQuatre(p)),
-      // La caixa és l'àncora, i amb més de mig patró en silenci cada cop de
-      // més se sent i li treu pes al que toca. Es queda als contratemps
-      // forts i, com a molt, un sol fantasma a tot el patró.
+      // Sortien 2,9 bombos per compàs. El dub va d'espai: amb el charles
+      // obert ja als vuit contratemps, el bombo ha de ser un o dos per
+      // compàs perquè el buit tingui pes. Es queden els dos primers.
       (p) => {
-        const c = veu(p, "caixa");
-        if (!c) return;
-        const forts = new Set(dosIQuatre(p));
-        let fantasma = false;
-        for (let i = 0; i < p.length; i++) {
-          if (!c.steps[i] || forts.has(i)) continue;
-          if (fantasma) c.steps[i] = 0;
-          else {
-            c.steps[i] = 1;
-            fantasma = true;
+        const k = veu(p, "bombo");
+        if (!k) return;
+        for (let c = 0; c * 16 < p.length; c++) {
+          let posats = 0;
+          for (let i = 0; i < 16 && c * 16 + i < p.length; i++) {
+            const j = c * 16 + i;
+            if (!k.steps[j]) continue;
+            if (posats >= 2) k.steps[j] = 0;
+            else posats++;
           }
         }
       },

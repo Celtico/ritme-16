@@ -141,6 +141,19 @@ describe("les regles de gènere se senten al resultat", () => {
     }
   });
 
+  it("dub: com a molt dos bombos per compàs", () => {
+    // divuit de vint llavors en tenien tres o més
+    for (let seed = 1; seed <= 20; seed++) {
+      const p = generate(styleById("dub")!, seed).song.slots[0].pattern;
+      const k = p.tracks.find((t) => t.kind === "bombo")!;
+      for (let c = 0; c * 16 < p.length; c++) {
+        let n = 0;
+        for (let i = 0; i < 16; i++) if (k.steps[c * 16 + i]) n++;
+        expect(n, `llavor ${seed}, compàs ${c}`).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
   it("ternari: el bombo fa tresillo 3+3+2", () => {
     for (let seed = 1; seed <= 30; seed++) {
       const { p, steps } = passos("ternari", seed, "bombo");
