@@ -22,6 +22,7 @@ import { useMeters } from "@/hooks/useMeters";
 import { useSequencer } from "@/hooks/useSequencer";
 import { useTheme } from "@/hooks/useTheme";
 import { isAudible, isMelodic, MAX_TRACKS } from "@/lib/pattern";
+import { decodePattern, SHARE_PARAM } from "@/lib/share";
 
 /** Divisor arrossegable. `axis` diu si mou amplada o alçada. */
 function Divider({
@@ -86,7 +87,23 @@ export function Workspace() {
   const levels = useMeters(seq.readLevels, seq.isPlaying);
   const hotkeys = new Map(tracks.slice(0, 8).map((t, i) => [t.id, String(i + 1)]));
 
-  const { toggleTransport, audition } = seq;
+  const { toggleTransport, audition, loadPattern } = seq;
+
+  /**
+   * Un patró compartit per adreça. Es carrega després del muntatge i no
+   * durant el render de servidor, que no sap res dels paràmetres de query;
+   * i es treu de la barra d'adreces perquè recarregar no el torni a imposar
+   * per damunt del que hagis fet des de llavors.
+   */
+  useEffect(() => {
+    const codi = new URLSearchParams(window.location.search).get(SHARE_PARAM);
+    if (!codi) return;
+    const compartit = decodePattern(codi);
+    if (compartit) loadPattern(compartit);
+    const net = new URL(window.location.href);
+    net.searchParams.delete(SHARE_PARAM);
+    window.history.replaceState(null, "", net.toString());
+  }, [loadPattern]);
   const tracksRef = useRef(tracks);
   useEffect(() => {
     tracksRef.current = tracks;

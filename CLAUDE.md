@@ -123,6 +123,9 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   comparteixen el transport en directe i l'exportació**; si cadascú tingués la seva
   còpia, el WAV acabaria sonant diferent del que se sent.
 - `src/lib/render.ts` — el renderitzat fora de línia amb `Tone.Offline`.
+- `src/lib/share.ts` — el patró dins d'un paràmetre d'adreça. Sense cap API del
+  navegador (ni `btoa`, ni `Buffer`), perquè el còdec es pugui provar sencer i doni el
+  mateix a tot arreu. En descodificar passa sempre per `normalise`.
 - `src/lib/wav.ts` — codificació WAV de 16 bits. Rep qualsevol cosa amb la forma d'un
   AudioBuffer, i per això es prova sense obrir cap AudioContext.
 
@@ -160,6 +163,7 @@ el `dev` es queda servint pàgines sense estils fins que el reinicies.
   toca al pas 13, dona exactament zero, i tornant a 16 hi torna a ser.
 - L'exportació a WAV està verificada al navegador: 10,24 s a 124 ppm (els 4 compassos
   més la cua), estèreo a 48 kHz, capçal correcte, pic 0,845 i cap finestra muda.
-- Pendent, no fet: compartir per URL, el banc de 8 patrons amb follow actions i les
-  escenes.
+- Compartir per URL verificat de punta a punta: es genera l'enllaç, s'obre en una càrrega
+  neta i tornen els passos, els accents, el baix, la tonalitat, la llargada i el tempo.
+- Pendent, no fet: el banc de 8 patrons amb follow actions i les escenes.
 - Sense provar: Safari i Firefox, el mòbil, i què passa amb el `localStorage` ple.

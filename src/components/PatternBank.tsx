@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PRESETS, type Pattern } from "@/lib/pattern";
 import { EXPORT_BARS } from "@/lib/render";
+import { shareUrl } from "@/lib/share";
 import { wavFileName } from "@/lib/wav";
 import { loadSaved, persist, type SavedPattern } from "@/lib/storage";
 
@@ -54,6 +55,21 @@ export function PatternBank({
   const [saved, setSaved] = useState<SavedPattern[]>([]);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copiat, setCopiat] = useState(false);
+
+  /** Copia al porta-retalls l'adreça d'aquesta pàgina amb el patró a dins. */
+  const copiaEnllac = async () => {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(
+        shareUrl(window.location.href, pattern),
+      );
+      setCopiat(true);
+      window.setTimeout(() => setCopiat(false), 2000);
+    } catch {
+      setError("El navegador no ha deixat copiar l'enllaç.");
+    }
+  };
 
   /** Descarrega el WAV. L'URL de l'objecte s'ha d'alliberar, o queda penjada. */
   const exporta = async () => {
@@ -111,6 +127,9 @@ export function PatternBank({
         <span className="mx-1 h-5 w-px bg-ink/20" aria-hidden />
         <PanelButton onClick={() => void exporta()} disabled={exporting}>
           {exporting ? "Exportant…" : `Exportar ${EXPORT_BARS} compassos`}
+        </PanelButton>
+        <PanelButton onClick={() => void copiaEnllac()}>
+          {copiat ? "Enllaç copiat" : "Copiar enllaç"}
         </PanelButton>
         {error ? (
           <span role="alert" className="text-[12px] text-oxblood">
