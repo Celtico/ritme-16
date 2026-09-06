@@ -8,6 +8,8 @@ interface Props {
   voiceName: string;
   underPlayhead: boolean;
   onToggle: (accent: boolean) => void;
+  /** Columna de la graella, comptant les columnes mortes entre grups. */
+  column: number;
 }
 
 const FACE: Record<Cell, string> = {
@@ -22,6 +24,7 @@ export function StepButton({
   voiceName,
   underPlayhead,
   onToggle,
+  column,
 }: Props) {
   const state = cell === 0 ? "buit" : cell === 1 ? "actiu" : "accentuat";
 
@@ -35,8 +38,9 @@ export function StepButton({
         e.preventDefault();
         onToggle(true);
       }}
+      style={{ gridColumn: column }}
       className={[
-        "h-9 min-w-[28px] max-w-[64px] flex-1 rounded-[3px] border border-ink/40 transition-[transform,background-color] duration-75",
+        "h-9 min-w-[20px] rounded-[3px] border border-ink/40 transition-[transform,background-color] duration-75",
         "active:translate-y-px",
         FACE[cell],
         underPlayhead

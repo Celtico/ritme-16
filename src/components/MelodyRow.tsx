@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { NotePicker } from "./NotePicker";
 import { ChordPicker } from "./ChordPicker";
-import { groupsOf4 } from "./groups";
+import { CELL_GAP, stepColumn, stepGridTemplate } from "./grid";
 import { ROW_GAP, ROW_HEIGHT } from "./layout";
 import {
   BASS_MAX_LENGTH,
@@ -79,12 +79,16 @@ export function MelodyRow({
 
   return (
     <div
-      className={["relative flex gap-3", dimmed ? "opacity-45" : ""].join(" ")}
-      style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
+      className={["relative", dimmed ? "opacity-45" : ""].join(" ")}
+      style={{
+        display: "grid",
+        gridTemplateColumns: stepGridTemplate(length),
+        columnGap: CELL_GAP,
+        height: ROW_HEIGHT,
+        marginBottom: ROW_GAP,
+      }}
     >
-      {groupsOf4(length).map((g, gi) => (
-        <div key={gi} className="flex flex-1 gap-1">
-          {g.map((i) => {
+      {Array.from({ length }, (_, i) => {
             const cobreix = noteCovering(fila, i);
             const propia = cobreix?.start === i;
             // les cel·les que una nota cobreix no es tornen a dibuixar
@@ -116,8 +120,9 @@ export function MelodyRow({
                   }
                   setObert(obert === i ? null : i);
                 }}
+                style={{ gridColumn: stepColumn(i) }}
                 className={[
-                  "relative h-9 min-w-[28px] max-w-[64px] flex-1 border border-ink/40 text-[10px] leading-none transition-colors",
+                  "relative h-9 min-w-[20px] border border-ink/40 text-[10px] leading-none transition-colors",
                   continua ? "rounded-none border-l-0" : "rounded-[3px]",
                   cobreix
                     ? accent
@@ -145,9 +150,7 @@ export function MelodyRow({
                 ) : null}
               </button>
             );
-          })}
-        </div>
-      ))}
+      })}
 
       {obert !== null ? (
         esBaix ? (

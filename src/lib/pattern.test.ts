@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupsOf4 } from "../components/groups";
+import { stepColumn, stepGridTemplate } from "../components/grid";
 import {
   applyMacroAssignment,
   clonePattern,
@@ -415,18 +415,27 @@ describe("llargada del patró", () => {
     expect(clonat.tracks[0].steps[20]).toBe(2);
   });
 
-  it("reparteix els passos en grups de quatre a qualsevol llargada", () => {
-    expect(groupsOf4(8)).toEqual([
-      [0, 1, 2, 3],
-      [4, 5, 6, 7],
-    ]);
-    expect(groupsOf4(16)).toHaveLength(4);
-    expect(groupsOf4(32)).toHaveLength(8);
-    // cap índex perdut ni repetit
+  it("fa una graella de columnes iguals amb un buit entre grups de quatre", () => {
+    expect(stepGridTemplate(8)).toBe(
+      "repeat(4, minmax(0, 1fr)) 4px repeat(4, minmax(0, 1fr))",
+    );
+    // una columna morta per cada frontera de grup
     for (const n of PATTERN_LENGTHS) {
-      expect(groupsOf4(n).flat()).toEqual(
-        Array.from({ length: n }, (_, i) => i),
-      );
+      const t = stepGridTemplate(n);
+      expect((t.match(/repeat/g) ?? []).length, `${n}`).toBe(n / 4);
+      expect((t.match(/4px/g) ?? []).length, `${n}`).toBe(n / 4 - 1);
+    }
+  });
+
+  it("col·loca cada pas a la seva columna, saltant-se les mortes", () => {
+    // primer grup: columnes 1-4; segon grup: 6-9, perquè la 5 és el buit
+    expect([0, 1, 2, 3].map(stepColumn)).toEqual([1, 2, 3, 4]);
+    expect([4, 5, 6, 7].map(stepColumn)).toEqual([6, 7, 8, 9]);
+    expect(stepColumn(15)).toBe(19);
+    // mai dues passes a la mateixa columna
+    for (const n of PATTERN_LENGTHS) {
+      const cols = Array.from({ length: n }, (_, i) => stepColumn(i));
+      expect(new Set(cols).size, `${n}`).toBe(n);
     }
   });
 });
