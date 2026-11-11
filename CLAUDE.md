@@ -12,6 +12,7 @@ percussió sintetitzades en temps real amb Tone.js, sense cap sample. Next.js 15
 | --- | --- |
 | `npm run dev` | provar-ho de veritat; l'àudio només es pot comprovar aquí |
 | `npm run build` | abans de tancar una tasca que toqui rutes, fonts o layout |
+| `STATIC_EXPORT=1 BASE_PATH=/ritme-16 npm run build` | la build estàtica que publica el workflow de GitHub Pages, a `out/` |
 | `npm run typecheck` | després de qualsevol canvi a `.ts`/`.tsx` |
 | `npm run lint` | ídem; `next build` també hi falla, o sigui que val més passar-hi abans |
 | `npm test` | tests de `src/lib` amb Vitest; ha de passar abans de tancar res |

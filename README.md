@@ -11,6 +11,21 @@ npm install
 npm run dev
 ```
 
+## Publicar-ho
+
+No hi ha servidor: tot corre al navegador. `STATIC_EXPORT=1 npm run build`
+escriu el lloc sencer a `out/`, i qualsevol allotjament de fitxers estàtics el
+pot servir. Si no va a l'arrel del domini, `BASE_PATH` n'és la subruta:
+
+```bash
+STATIC_EXPORT=1 BASE_PATH=/ritme-16 npm run build
+```
+
+El workflow `.github/workflows/pages.yml` fa això mateix a cada push a `main`
+i ho publica a GitHub Pages. Cal haver triat, un sol cop, «GitHub Actions» a
+Settings → Pages → Source. Sense aquestes variables, `npm run build` i
+`npm start` continuen fent el servidor de Next de sempre.
+
 ## Com es toca
 
 | Acció | Com |
